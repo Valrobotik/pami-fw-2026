@@ -34,6 +34,7 @@
 #define DIAMETRE_ROUE 65// en millimètre
 #define LARGEUR 123// en millimètre largeur entre les 2 roues
 #define DISTANCE 100 // en millimetre, distance avant le mur
+#define LONGUEURCAPLA 100 // en millimetre, longueur d'un obstacle
 
 Adafruit_VL53L0X lox = Adafruit_VL53L0X();
  
@@ -130,21 +131,38 @@ void tourner(int rot){ // paramètre en degré, largeur en millimetre
   }
 }
 
-void aller_a_position(int x ,int y, int current_x, int current_y, int current_theta){ // parametre en millimetre , x et y coordonnées que l'ont veut atteindre, theta parametre d'orientation
-  int theta = atan(y/x)*(180/PI) - current_theta ;
+int droite (int x, int y ){
   int z = sqrt(pow(x,2) + pow(y,2));
-  tourner(theta);
-  avancer(z);
-  Serial.printf("%d %d la fonction tourne avec ces paramètres", z, theta);
-  current_theta = theta;
-  current_x = x;
-  current_y=y;
-  Serial.printf("%d, %d %d voici les coordonnées apres le déplacement", current_x, current_y, current_theta);
+  return z;
+}
+
+
+void aller_a_position(int x ,int y, int current_x, int current_y, int current_theta){ // parametre en millimetre , x et y coordonnées que l'ont veut atteindre, theta parametre d'orientation
+
+    int theta = atan(y/x)*(180/PI) - current_theta ;
+    int z = droite(x,y);
+    tourner(theta);
+    avancer(z);
+    Serial.printf("%d %d la fonction tourne avec ces paramètres", z, theta);
+    current_theta = theta;
+    current_x = x;
+    current_y=y;
+    Serial.printf("%d, %d %d voici les coordonnées apres le déplacement", current_x, current_y, current_theta);
+    if (obstacle() == true){
+      tourner(90);
+      avancer(LONGUEURCAPLA); 
+      tourner(-90);
+      avancer(droite(x,y) - droite(current_x, current_y));
+    }
+  
 }
 // A faire : -rajouter une position initiale de réference !
 //- rajouter une procédure en cas d'obstacle pour le contourner ou simplement créer une nouvelle trajectoire non linéaire
 // (a ce propos là refléchir à une trajectoire circulaire en utilisant séparenemen les 2 roues et pas le déplacement central -> permettrait une trajectoire plus souple)
 // emplacement initial avec un pole pour reperer son orientation et des coordonnées 0,0 => à établier avec le terrain de jeu directement
+// Coordonnées des capla à avoir avec le wifi, sinon pas possible de différencier le mur et les capla et donc ce qu'il faudrait contourner dans la trajectoire
+// Donc faire une fonction capla qui connait la coordonées du capla à eviter si il est sur notre droit de trajectoire et decaler notre trajectoire
+
 
 void setup() {
   Serial.begin(115200);
