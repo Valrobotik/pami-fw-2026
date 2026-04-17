@@ -130,22 +130,21 @@ void tourner(int rot){ // paramètre en degré, largeur en millimetre
   }
 }
 
-void aller_a_position(int x,int y, int theta){ // parametre en millimetre , x et y coordonnées que l'ont veut atteindre, theta parametre d'orientation
-  int new_x, new_y, new_theta;
-  new_x
-  
-  stepper2->move(distance(d));
-  stepper1->move(-distance(d));
-  
-  while (stepper2->isRunning()&& stepper1->isRunning()){
-    if (obstacle() == true){
-      Serial.printf("%d la fonction avance avec ces paramètres" , d);
-      stepper2->stopMove();
-      stepper1->stopMove();
-    }
-  }
+void aller_a_position(int x ,int y, int current_x, int current_y, int current_theta){ // parametre en millimetre , x et y coordonnées que l'ont veut atteindre, theta parametre d'orientation
+  int theta = atan(y/x)*(180/PI) - current_theta ;
+  int z = sqrt(pow(x,2) + pow(y,2));
+  tourner(theta);
+  avancer(z);
+  Serial.printf("%d %d la fonction tourne avec ces paramètres", z, theta);
+  current_theta = theta;
+  current_x = x;
+  current_y=y;
+  Serial.printf("%d, %d %d voici les coordonnées apres le déplacement", current_x, current_y, current_theta);
 }
-
+// A faire : -rajouter une position initiale de réference !
+//- rajouter une procédure en cas d'obstacle pour le contourner ou simplement créer une nouvelle trajectoire non linéaire
+// (a ce propos là refléchir à une trajectoire circulaire en utilisant séparenemen les 2 roues et pas le déplacement central -> permettrait une trajectoire plus souple)
+// emplacement initial avec un pole pour reperer son orientation et des coordonnées 0,0 => à établier avec le terrain de jeu directement
 
 void setup() {
   Serial.begin(115200);
@@ -163,9 +162,7 @@ void setup() {
   engine.init();
   init_moteur2();
   init_moteur1();
-  avancer(300);
-  tourner(360);
-  avancer(200);
+  aller_a_position(300 ,300, 0, 0, 0);
 }
 
 uint32_t elapsed = 0;
