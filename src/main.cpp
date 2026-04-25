@@ -1,35 +1,8 @@
 #include <Arduino.h>
-#include "FastAccelStepper.h"
-#include "Adafruit_VL53L0X.h"
-// #define EN 6
-// #define DIR 7
-// #define STEP 8
-// #define SLEEP 5
-// #define VREF 10
+#include <FastAccelStepper.h>
+#include <Adafruit_VL53L0X.h>
 
-//#define EN 18
-//#define DIR 33
-//#define STEP 48
-//#define SLEEP 17
-//#define VREF 47
-
-#define EN_1 6
-#define DIR_1 7
-#define STEP_1 8
-#define VREF_1 10
-#define SLEEP_1 5
-#define FAULT_1 9
-
-#define EN_2 18
-#define DIR_2 33
-#define STEP_2 48
-#define VREF_2 47
-#define SLEEP_2 17
-#define FAULT_2 38
-
-#define SCL 13
-#define SDA 14
-
+#include "pin_definitions.h"
 
 #define DIAMETRE_ROUE 65// en millimètre
 #define LARGEUR 123// en millimètre largeur entre les 2 roues
@@ -46,19 +19,19 @@ FastAccelStepper *stepper2 = NULL;
 void init_moteur1(){
   int v = 1;
   int f = v*51200 ;
-  pinMode(SLEEP_1, OUTPUT);
-   pinMode(VREF_1, OUTPUT);
-   pinMode(EN_1,OUTPUT);
-   digitalWrite(EN_1, HIGH);
-   digitalWrite(SLEEP_1, HIGH);
+  pinMode(SLEEP_1_PIN, OUTPUT);
+   pinMode(VREF_1_PIN, OUTPUT);
+   pinMode(EN_1_PIN,OUTPUT);
+   digitalWrite(EN_1_PIN, HIGH);
+   digitalWrite(SLEEP_1_PIN, HIGH);
    // analogWrite(VREF, 500);
-   ledcAttach(VREF_1, 5000, 12);
-   ledcWrite(VREF_1, 512);
+   ledcAttach(VREF_1_PIN, 5000, 12);
+   ledcWrite(VREF_1_PIN, 512);
    // digitalWrite(VREF, HIGH);
    delay(10);
-  stepper1 = engine.stepperConnectToPin(STEP_1);
+  stepper1 = engine.stepperConnectToPin(STEP_1_PIN);
   if (stepper1) {
-    stepper1->setDirectionPin(DIR_1);
+    stepper1->setDirectionPin(DIR_1_PIN);
     //stepper->setEnablePin(EN_1);
     stepper1->setAutoEnable(true);
   }
@@ -70,19 +43,19 @@ void init_moteur1(){
 void init_moteur2(){
   int v = 1;
   int f = v*51200 ;
-  pinMode(SLEEP_2, OUTPUT);
-  pinMode(VREF_2, OUTPUT);
-  pinMode(EN_2,OUTPUT);
-  digitalWrite(EN_2, HIGH);
-  digitalWrite(SLEEP_2, HIGH);
+  pinMode(SLEEP_2_PIN, OUTPUT);
+  pinMode(VREF_2_PIN, OUTPUT);
+  pinMode(EN_2_PIN,OUTPUT);
+  digitalWrite(EN_2_PIN, HIGH);
+  digitalWrite(SLEEP_2_PIN, HIGH);
    // analogWrite(VREF, 500);
-   ledcAttach(VREF_2, 5000, 12);
-   ledcWrite(VREF_2, 512);
+   ledcAttach(VREF_2_PIN, 5000, 12);
+   ledcWrite(VREF_2_PIN, 512);
    // digitalWrite(VREF, HIGH);
    delay(10);
-  stepper2 = engine.stepperConnectToPin(STEP_2);
+  stepper2 = engine.stepperConnectToPin(STEP_2_PIN);
   if (stepper2) {
-    stepper2->setDirectionPin(DIR_2);
+    stepper2->setDirectionPin(DIR_2_PIN);
     stepper2->setAutoEnable(true);
     
   }
