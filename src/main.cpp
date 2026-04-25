@@ -18,6 +18,17 @@ FastAccelStepper *stepper2 = NULL;
 
 Commander command = Commander(Serial);
 
+typedef struct odometry_status_t {
+  int current_x = 0;
+  int current_y = 0;
+  int current_angle = 0;
+
+  int target_x = 0;
+  int target_y = 0;
+  int target_angle = 0;
+} odometry_status_t;
+odometry_status_t odometry_status {};
+
 void init_moteur1(){
   int v = 1;
   int f = v*51200 ;
@@ -105,24 +116,30 @@ int droite (int x, int y ){
   return z;
 }
 
-
-void aller_a_position(int x ,int y, int current_x, int current_y, int current_theta){ // parametre en millimetre , x et y coordonnées que l'ont veut atteindre, theta parametre d'orientation
-
-    int theta = atan(y/x)*(180/PI) - current_theta ;
-    int z = droite(x,y);
-    tourner(theta);
-    avancer(z);
-    Serial.printf("%d %d la fonction tourne avec ces paramètres\n", z, theta);
-    current_theta = theta;
-    current_x = x;
-    current_y=y;
-    Serial.printf("%d, %d %d voici les coordonnées apres le déplacement\n", current_x, current_y, current_theta);
-    // if (obstacle() == true){
-    //   tourner(90);
-    //   avancer(LONGUEURCAPLA);
-    //   tourner(-90);
-    //   avancer(droite(x,y) - droite(current_x, current_y));
-    // }
+// parametre en millimetre , x et y coordonnées que l'ont veut atteindre,
+// theta parametre d'orientation
+void aller_a_position(int x ,int y) {
+  int theta;
+  if (!x) {
+    theta = 90;
+  } else {
+    theta = atan(y/x)*(180/PI);
+  }
+  int z = droite(x - odometry_status.current_x, y - odometry_status.current_y);
+  tourner(theta - odometry_status.current_angle);
+  avancer(z);
+  Serial.printf("%d %d la fonction tourne avec ces paramètres\n", z, theta);
+  odometry_status.current_angle += theta;
+  odometry_status.current_x += x;
+  odometry_status.current_y += y;
+  Serial.printf("%d, %d %d voici les coordonnées apres le déplacement\n",
+    odometry_status.current_x, odometry_status.current_y, odometry_status.current_angle);
+  // if (obstacle() == true){
+  //   tourner(90);
+  //   avancer(LONGUEURCAPLA);
+  //   tourner(-90);
+  //   avancer(droite(x,y) - droite(current_x, current_y));
+  // }
   
 }
 // A faire : -rajouter une position initiale de réference !
@@ -133,8 +150,22 @@ void aller_a_position(int x ,int y, int current_x, int current_y, int current_th
 // Donc faire une fonction capla qui connait la coordonées du capla à eviter si il est sur notre droit de trajectoire et decaler notre trajectoire
 
 void doGoPos(char *cmd) {
-  aller_a_position(100, 100, 0, 0, 0);
+  aller_a_position(odometry_status.target_x, odometry_status.target_y);
   Serial.println("going to 100;100");
+}
+
+void doSetTargetX(char *cmd) {
+  float target_x;
+  command.scalar(&target_x, cmd);
+  odometry_status.target_x = int(round(target_x));
+  Serial.printf("Set target X to %d\n", odometry_status.target_x);
+}
+
+void doSetTargetY(char *cmd) {
+  float target_y;
+  command.scalar(&target_y, cmd);
+  odometry_status.target_y = int(round(target_y));
+  Serial.printf("Set target Y to %d\n", odometry_status.target_y);
 }
 
 void setup() {
@@ -158,8 +189,8 @@ void setup() {
   command.verbose = VerboseMode::user_friendly;
   command.decimal_places = 5;
   command.add('P', doGoPos);
-
-  // aller_a_position(300 ,300, 0, 0, 0);
+  command.add('X', doSetTargetX);
+  command.add('Y', doSetTargetY);
 }
 
 uint32_t elapsed = 0;
