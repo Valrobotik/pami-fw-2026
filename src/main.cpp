@@ -168,6 +168,29 @@ void doSetTargetY(char *cmd) {
   Serial.printf("Set target Y to %d\n", odometry_status.target_y);
 }
 
+void doSetCurrentX(char *cmd) {
+  float current_x;
+  command.scalar(&current_x, cmd);
+  odometry_status.current_x = int(round(current_x));
+  Serial.printf("Set target X to %d\n", odometry_status.current_x);
+}
+
+void doSetCurrentY(char *cmd) {
+  float current_y;
+  command.scalar(&current_y, cmd);
+  odometry_status.current_x = int(round(current_y));
+  Serial.printf("Set target X to %d\n", odometry_status.current_y);
+}
+
+void doPrintOdoStatus(char *cmd) {
+  Serial.printf("Current X:\t %d\n", odometry_status.current_x);
+  Serial.printf("Current Y:\t %d\n", odometry_status.current_y);
+  Serial.printf("Current θ:\t %d\n", odometry_status.current_angle);
+
+  Serial.printf("Target X:\t %d\n", odometry_status.target_x);
+  Serial.printf("Target Y:\t %d\n", odometry_status.target_y);
+}
+
 void setup() {
   Serial.begin(115200);
   Wire.setPins(14, 13);
@@ -188,9 +211,12 @@ void setup() {
   // Commander
   command.verbose = VerboseMode::user_friendly;
   command.decimal_places = 5;
-  command.add('P', doGoPos);
+  command.add('G', doGoPos);
   command.add('X', doSetTargetX);
   command.add('Y', doSetTargetY);
+  command.add('x', doSetCurrentX);
+  command.add('y', doSetCurrentY);
+  command.add('P', doPrintOdoStatus);
 }
 
 uint32_t elapsed = 0;
