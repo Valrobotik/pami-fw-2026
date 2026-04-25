@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <FastAccelStepper.h>
 #include <Adafruit_VL53L0X.h>
+#include "Commander.h"
 
 #include "pin_definitions.h"
 
@@ -11,10 +12,11 @@
 
 Adafruit_VL53L0X lox = Adafruit_VL53L0X();
  
-
 FastAccelStepperEngine engine = FastAccelStepperEngine();
 FastAccelStepper *stepper1 = NULL;
 FastAccelStepper *stepper2 = NULL;
+
+Commander command = Commander(Serial);
 
 void init_moteur1(){
   int v = 1;
@@ -61,7 +63,7 @@ bool obstacle(){ /*Est ce que mur présent devant la tete du robot*/
   VL53L0X_RangingMeasurementData_t measure;
   lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
   delay(10);    
-  Serial.println(measure.RangeMilliMeter);
+  // Serial.println(measure.RangeMilliMeter);
   return (measure.RangeMilliMeter < DISTANCE);
 }
 
@@ -79,7 +81,7 @@ void avancer(int d){ // parametre en millimetre
   
   while (stepper2->isRunning()&& stepper1->isRunning()){
     if (obstacle() == true){
-      Serial.printf("%d la fonction avance avec ces paramètres" , d);
+      // Serial.printf("%d la fonction avance avec ces paramètres\n" , d);
       stepper2->stopMove();
       stepper1->stopMove();
     }
@@ -110,17 +112,17 @@ void aller_a_position(int x ,int y, int current_x, int current_y, int current_th
     int z = droite(x,y);
     tourner(theta);
     avancer(z);
-    Serial.printf("%d %d la fonction tourne avec ces paramètres", z, theta);
+    Serial.printf("%d %d la fonction tourne avec ces paramètres\n", z, theta);
     current_theta = theta;
     current_x = x;
     current_y=y;
-    Serial.printf("%d, %d %d voici les coordonnées apres le déplacement", current_x, current_y, current_theta);
-    if (obstacle() == true){
-      tourner(90);
-      avancer(LONGUEURCAPLA); 
-      tourner(-90);
-      avancer(droite(x,y) - droite(current_x, current_y));
-    }
+    Serial.printf("%d, %d %d voici les coordonnées apres le déplacement\n", current_x, current_y, current_theta);
+    // if (obstacle() == true){
+    //   tourner(90);
+    //   avancer(LONGUEURCAPLA);
+    //   tourner(-90);
+    //   avancer(droite(x,y) - droite(current_x, current_y));
+    // }
   
 }
 // A faire : -rajouter une position initiale de réference !
@@ -130,6 +132,10 @@ void aller_a_position(int x ,int y, int current_x, int current_y, int current_th
 // Coordonnées des capla à avoir avec le wifi, sinon pas possible de différencier le mur et les capla et donc ce qu'il faudrait contourner dans la trajectoire
 // Donc faire une fonction capla qui connait la coordonées du capla à eviter si il est sur notre droit de trajectoire et decaler notre trajectoire
 
+void doGoPos(char *cmd) {
+  aller_a_position(100, 100, 0, 0, 0);
+  Serial.println("going to 100;100");
+}
 
 void setup() {
   Serial.begin(115200);
@@ -147,17 +153,22 @@ void setup() {
   engine.init();
   init_moteur2();
   init_moteur1();
-  aller_a_position(300 ,300, 0, 0, 0);
+
+  // Commander
+  command.verbose = VerboseMode::user_friendly;
+  command.decimal_places = 5;
+  command.add('P', doGoPos);
+
+  // aller_a_position(300 ,300, 0, 0, 0);
 }
 
 uint32_t elapsed = 0;
 bool a = false;
 
 void loop() {
-   if (millis() > elapsed + 2000) {
-     a = !a;
-     elapsed = millis();
-   }
-   
-  
+  //  if (millis() > elapsed + 2000) {
+  //    a = !a;
+  //    elapsed = millis();
+  //  }
+  command.run(); 
 }
