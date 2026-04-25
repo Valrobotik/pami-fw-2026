@@ -4,6 +4,7 @@
 #include "Commander.h"
 
 #include "pin_definitions.h"
+#include "motor.h"
 
 #define DIAMETRE_ROUE 65// en millimètre
 #define LARGEUR 123// en millimètre largeur entre les 2 roues
@@ -12,11 +13,11 @@
 
 Adafruit_VL53L0X lox = Adafruit_VL53L0X();
  
-FastAccelStepperEngine engine = FastAccelStepperEngine();
-FastAccelStepper *stepper1 = NULL;
-FastAccelStepper *stepper2 = NULL;
-
 Commander command = Commander(Serial);
+
+extern FastAccelStepperEngine engine;
+Stepper stepper1 = Stepper(DIR_1_PIN, STEP_1_PIN, SLEEP_1_PIN, VREF_1_PIN, EN_1_PIN, 300);
+Stepper stepper2 = Stepper(DIR_2_PIN, STEP_2_PIN, SLEEP_2_PIN, VREF_2_PIN, EN_2_PIN, 300);
 
 typedef struct odometry_status_t {
   int current_x = 0;
@@ -29,45 +30,6 @@ typedef struct odometry_status_t {
 } odometry_status_t;
 odometry_status_t odometry_status {};
 
-void init_moteur1(){
-  int v = 1;
-  int f = v*51200 ;
-  pinMode(SLEEP_1_PIN, OUTPUT);
-  pinMode(VREF_1_PIN, OUTPUT);
-  pinMode(EN_1_PIN,OUTPUT);
-  digitalWrite(EN_1_PIN, HIGH);
-  digitalWrite(SLEEP_1_PIN, HIGH);
-  ledcAttach(VREF_1_PIN, 5000, 12);
-  ledcWrite(VREF_1_PIN, 300);
-  stepper1 = engine.stepperConnectToPin(STEP_1_PIN);
-  if (stepper1) {
-    stepper1->setDirectionPin(DIR_1_PIN);
-    //stepper->setEnablePin(EN_1);
-    stepper1->setAutoEnable(true);
-  }
-  stepper1->setSpeedInHz(f);       // 500 steps/s
-  stepper1->setAcceleration(100000); 
-}
-
-void init_moteur2(){
-  int v = 1;
-  int f = v*51200 ;
-  pinMode(SLEEP_2_PIN, OUTPUT);
-  pinMode(VREF_2_PIN, OUTPUT);
-  pinMode(EN_2_PIN,OUTPUT);
-  digitalWrite(EN_2_PIN, HIGH);
-  digitalWrite(SLEEP_2_PIN, HIGH);
-  ledcAttach(VREF_2_PIN, 5000, 12);
-  ledcWrite(VREF_2_PIN, 300);
-  stepper2 = engine.stepperConnectToPin(STEP_2_PIN);
-  if (stepper2) {
-    stepper2->setDirectionPin(DIR_2_PIN);
-    stepper2->setAutoEnable(true);
-    
-  }
-  stepper2->setSpeedInHz(f);       // 500 steps/s
-  stepper2->setAcceleration(100000);  // 100 steps/s²
-}
 
 bool obstacle(){ /*Est ce que mur présent devant la tete du robot*/
   return false; // tmp
@@ -87,26 +49,26 @@ int distance (int d ){ //d en millimètre distance à parcourir
 }
 
 void avancer(int d){ // parametre en millimetre
-  stepper2->move(distance(d));
-  stepper1->move(-distance(d));
+  stepper2.move(distance(d));
+  stepper1.move(-distance(d));
   
-  while (stepper2->isRunning()&& stepper1->isRunning()){
+  while (stepper2.isRunning()&& stepper1.isRunning()){
     if (obstacle() == true){
       // Serial.printf("%d la fonction avance avec ces paramètres\n" , d);
-      stepper2->stopMove();
-      stepper1->stopMove();
+      stepper2.stopMove();
+      stepper1.stopMove();
     }
   }
 }
 
 void tourner(int rot){ // paramètre en degré, largeur en millimetre 
-  stepper2->move(distance((LARGEUR*PI*rot)/360));
-  stepper1->move(-distance((-LARGEUR*PI*rot)/360));
+  stepper2.move(distance((LARGEUR*PI*rot)/360));
+  stepper1.move(-distance((-LARGEUR*PI*rot)/360));
   // Serial.printf("%d %d la fonction tourne avec ces paramètres\n", rot);
-  while (stepper2->isRunning()&& stepper1->isRunning()){
+  while (stepper2.isRunning()&& stepper1.isRunning()){
     if (obstacle() == true){
-      stepper2->stopMove();
-      stepper1->stopMove();
+      stepper2.stopMove();
+      stepper1.stopMove();
     }
   }
 }
@@ -210,8 +172,9 @@ void setup() {
 
   Serial.println(f);
   engine.init();
-  init_moteur2();
-  init_moteur1();
+  stepper1.init();
+  stepper2.init();
+
 
   // Commander
   command.verbose = VerboseMode::user_friendly;
