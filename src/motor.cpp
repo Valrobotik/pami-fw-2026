@@ -40,3 +40,8 @@ bool Stepper::isRunning() const
 void Stepper::stopMove() {
     return m_stepper->stopMove();
 }
+
+int32_t Stepper::getCurrentPosition() const
+{
+    return m_stepper->getCurrentPosition();
+}

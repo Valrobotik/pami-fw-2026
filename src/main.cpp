@@ -32,7 +32,6 @@ odometry_status_t odometry_status {};
 
 
 bool obstacle(){ /*Est ce que mur présent devant la tete du robot*/
-  return false; // tmp
   VL53L0X_RangingMeasurementData_t measure;
   lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
   delay(10);    
@@ -40,7 +39,7 @@ bool obstacle(){ /*Est ce que mur présent devant la tete du robot*/
   return (measure.RangeMilliMeter < DISTANCE);
 }
 
-int distance (int d ){ //d en millimètre distance à parcourir
+int distance_to_step(int d){ //d en millimètre distance à parcourir
   float var;
   int pas;
   var = (d)/ (DIAMETRE_ROUE*PI);
@@ -48,9 +47,14 @@ int distance (int d ){ //d en millimètre distance à parcourir
   return pas;
 }
 
-void avancer(int d){ // parametre en millimetre
-  stepper2.move(distance(d));
-  stepper1.move(-distance(d));
+float step_to_distance(int s) {
+  return (s*DIAMETRE_ROUE*PI)/51200;
+}
+
+int avancer(int d){ // parametre en millimetre
+  int initial_pos = stepper1.getCurrentPosition();
+  stepper2.move(distance_to_step(d));
+  stepper1.move(-distance_to_step(d));
   
   while (stepper2.isRunning()&& stepper1.isRunning()){
     if (obstacle() == true){
@@ -59,18 +63,26 @@ void avancer(int d){ // parametre en millimetre
       stepper1.stopMove();
     }
   }
+  return d;
 }
 
-void tourner(int rot){ // paramètre en degré, largeur en millimetre 
-  stepper2.move(distance((LARGEUR*PI*rot)/360));
-  stepper1.move(-distance((-LARGEUR*PI*rot)/360));
+int tourner(int rot){ // paramètre en degré, largeur en millimetre 
+  int32_t start_steps = stepper2.getCurrentPosition();
+  stepper2.move(distance_to_step((LARGEUR*PI*rot)/360));
+  stepper1.move(-distance_to_step((-LARGEUR*PI*rot)/360));
   // Serial.printf("%d %d la fonction tourne avec ces paramètres\n", rot);
   while (stepper2.isRunning()&& stepper1.isRunning()){
     if (obstacle() == true){
       stepper2.stopMove();
       stepper1.stopMove();
+      delay(500); // prsk c'est comme ca
+      float distance_parcourue = -step_to_distance(abs(start_steps-stepper2.getCurrentPosition()));
+      Serial.printf("distance parcourue: %f\n", distance_parcourue);
+      Serial.printf("returned: %d\n", int((distance_parcourue * 360)/(LARGEUR*PI)));
+      return int((distance_parcourue * 360)/(LARGEUR*PI));
     }
   }
+  return rot;
 }
 
 int droite (int x, int y ){
@@ -92,13 +104,14 @@ void aller_a_position(int x ,int y) {
   Serial.printf("theta: %d\n", theta);
   int d_theta = ((theta - odometry_status.current_angle + 180) % 360) - 180;
   int z = droite(dx, dy);
-  tourner(d_theta);
-  avancer(z);
-  // odometry_status.current_angle += d_theta;
   int bf = odometry_status.current_angle;
-  odometry_status.current_angle = (odometry_status.current_angle + d_theta) % 360;
-  odometry_status.current_x += dx;
-  odometry_status.current_y += dy;
+
+  odometry_status.current_angle = (odometry_status.current_angle + tourner(d_theta)) % 360;
+  if (avancer(z) == z) {
+    odometry_status.current_x += dx;
+    odometry_status.current_y += dy;
+  }
+
   Serial.printf("dx: %d, dy: %d, dθ: %d\n", dx, dy, d_theta);
   Serial.printf("moving by %d from %d to %d\n", d_theta, bf, odometry_status.current_angle);
   // if (obstacle() == true){

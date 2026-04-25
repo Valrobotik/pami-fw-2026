@@ -2,13 +2,14 @@
 #include <FastAccelStepper.h>
 
 
-class Stepper : public FastAccelStepper {
+class Stepper {
 public:
     Stepper(uint8_t dir_pin, uint8_t step_pin, int8_t sleep_pin, uint8_t vpwm_pin, uint8_t en_pin, uint32_t current);
     void init();
     MoveResultCode move(int32_t move, bool blocking = false);
     bool isRunning() const;
     void stopMove();
+    int32_t getCurrentPosition() const;
      
 private:
     FastAccelStepper* m_stepper;
