@@ -102,7 +102,7 @@ void avancer(int d){ // parametre en millimetre
 void tourner(int rot){ // paramètre en degré, largeur en millimetre 
   stepper2->move(distance((LARGEUR*PI*rot)/360));
   stepper1->move(-distance((-LARGEUR*PI* rot)/360));
-  Serial.printf("%d %d la fonction tourne avec ces paramètres", rot);
+  // Serial.printf("%d %d la fonction tourne avec ces paramètres\n", rot);
   while (stepper2->isRunning()&& stepper1->isRunning()){
     if (obstacle() == true){
       stepper2->stopMove();
@@ -119,21 +119,20 @@ int droite (int x, int y ){
 // parametre en millimetre , x et y coordonnées que l'ont veut atteindre,
 // theta parametre d'orientation
 void aller_a_position(int x ,int y) {
-  int theta;
-  if (!x) {
-    theta = 90;
-  } else {
-    theta = atan(y/x)*(180/PI);
-  }
-  int z = droite(x - odometry_status.current_x, y - odometry_status.current_y);
-  tourner(theta - odometry_status.current_angle);
+  if (!x && !y)
+    Serial.println("Pas de mouvements nécessaire");
+  int dx = x - odometry_status.current_x;
+  int dy = y - odometry_status.current_y;
+  Serial.printf("Moving by x: %d, y:%d\n", dx, dy);
+  int theta = atan2(dx, dy)*(180/PI);
+  int d_theta = (theta - odometry_status.current_angle) % 360;
+  int z = droite(dx, dy);
+  tourner(d_theta);
   avancer(z);
-  Serial.printf("%d %d la fonction tourne avec ces paramètres\n", z, theta);
-  odometry_status.current_angle += theta;
-  odometry_status.current_x += x;
-  odometry_status.current_y += y;
-  Serial.printf("%d, %d %d voici les coordonnées apres le déplacement\n",
-    odometry_status.current_x, odometry_status.current_y, odometry_status.current_angle);
+  odometry_status.current_angle += d_theta;
+  odometry_status.current_x += dx;
+  odometry_status.current_y += dy;
+  Serial.printf("dx: %d, dy: %d, dθ: %d\n", dx, dy, d_theta);
   // if (obstacle() == true){
   //   tourner(90);
   //   avancer(LONGUEURCAPLA);
@@ -172,14 +171,14 @@ void doSetCurrentX(char *cmd) {
   float current_x;
   command.scalar(&current_x, cmd);
   odometry_status.current_x = int(round(current_x));
-  Serial.printf("Set target X to %d\n", odometry_status.current_x);
+  Serial.printf("Set current X to %d\n", odometry_status.current_x);
 }
 
 void doSetCurrentY(char *cmd) {
   float current_y;
   command.scalar(&current_y, cmd);
   odometry_status.current_x = int(round(current_y));
-  Serial.printf("Set target X to %d\n", odometry_status.current_y);
+  Serial.printf("Set current X to %d\n", odometry_status.current_y);
 }
 
 void doPrintOdoStatus(char *cmd) {
@@ -214,8 +213,8 @@ void setup() {
   command.add('G', doGoPos);
   command.add('X', doSetTargetX);
   command.add('Y', doSetTargetY);
-  command.add('x', doSetCurrentX);
-  command.add('y', doSetCurrentY);
+  command.add('i', doSetCurrentX);
+  command.add('j', doSetCurrentY);
   command.add('P', doPrintOdoStatus);
 }
 
