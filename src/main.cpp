@@ -20,15 +20,12 @@ void init_moteur1(){
   int v = 1;
   int f = v*51200 ;
   pinMode(SLEEP_1_PIN, OUTPUT);
-   pinMode(VREF_1_PIN, OUTPUT);
-   pinMode(EN_1_PIN,OUTPUT);
-   digitalWrite(EN_1_PIN, HIGH);
-   digitalWrite(SLEEP_1_PIN, HIGH);
-   // analogWrite(VREF, 500);
-   ledcAttach(VREF_1_PIN, 5000, 12);
-   ledcWrite(VREF_1_PIN, 512);
-   // digitalWrite(VREF, HIGH);
-   delay(10);
+  pinMode(VREF_1_PIN, OUTPUT);
+  pinMode(EN_1_PIN,OUTPUT);
+  digitalWrite(EN_1_PIN, HIGH);
+  digitalWrite(SLEEP_1_PIN, HIGH);
+  ledcAttach(VREF_1_PIN, 5000, 12);
+  ledcWrite(VREF_1_PIN, 512);
   stepper1 = engine.stepperConnectToPin(STEP_1_PIN);
   if (stepper1) {
     stepper1->setDirectionPin(DIR_1_PIN);
@@ -37,7 +34,6 @@ void init_moteur1(){
   }
   stepper1->setSpeedInHz(f);       // 500 steps/s
   stepper1->setAcceleration(100000); 
-
 }
 
 void init_moteur2(){
@@ -48,10 +44,8 @@ void init_moteur2(){
   pinMode(EN_2_PIN,OUTPUT);
   digitalWrite(EN_2_PIN, HIGH);
   digitalWrite(SLEEP_2_PIN, HIGH);
-   // analogWrite(VREF, 500);
    ledcAttach(VREF_2_PIN, 5000, 12);
    ledcWrite(VREF_2_PIN, 512);
-   // digitalWrite(VREF, HIGH);
    delay(10);
   stepper2 = engine.stepperConnectToPin(STEP_2_PIN);
   if (stepper2) {
