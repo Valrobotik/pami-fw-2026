@@ -38,7 +38,7 @@ void init_moteur1(){
   digitalWrite(EN_1_PIN, HIGH);
   digitalWrite(SLEEP_1_PIN, HIGH);
   ledcAttach(VREF_1_PIN, 5000, 12);
-  ledcWrite(VREF_1_PIN, 512);
+  ledcWrite(VREF_1_PIN, 300);
   stepper1 = engine.stepperConnectToPin(STEP_1_PIN);
   if (stepper1) {
     stepper1->setDirectionPin(DIR_1_PIN);
@@ -57,9 +57,8 @@ void init_moteur2(){
   pinMode(EN_2_PIN,OUTPUT);
   digitalWrite(EN_2_PIN, HIGH);
   digitalWrite(SLEEP_2_PIN, HIGH);
-   ledcAttach(VREF_2_PIN, 5000, 12);
-   ledcWrite(VREF_2_PIN, 512);
-   delay(10);
+  ledcAttach(VREF_2_PIN, 5000, 12);
+  ledcWrite(VREF_2_PIN, 300);
   stepper2 = engine.stepperConnectToPin(STEP_2_PIN);
   if (stepper2) {
     stepper2->setDirectionPin(DIR_2_PIN);
@@ -71,6 +70,7 @@ void init_moteur2(){
 }
 
 bool obstacle(){ /*Est ce que mur présent devant la tete du robot*/
+  return false; // tmp
   VL53L0X_RangingMeasurementData_t measure;
   lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
   delay(10);    
@@ -101,7 +101,7 @@ void avancer(int d){ // parametre en millimetre
 
 void tourner(int rot){ // paramètre en degré, largeur en millimetre 
   stepper2->move(distance((LARGEUR*PI*rot)/360));
-  stepper1->move(-distance((-LARGEUR*PI* rot)/360));
+  stepper1->move(-distance((-LARGEUR*PI*rot)/360));
   // Serial.printf("%d %d la fonction tourne avec ces paramètres\n", rot);
   while (stepper2->isRunning()&& stepper1->isRunning()){
     if (obstacle() == true){
@@ -119,20 +119,26 @@ int droite (int x, int y ){
 // parametre en millimetre , x et y coordonnées que l'ont veut atteindre,
 // theta parametre d'orientation
 void aller_a_position(int x ,int y) {
-  if (!x && !y)
-    Serial.println("Pas de mouvements nécessaire");
   int dx = x - odometry_status.current_x;
   int dy = y - odometry_status.current_y;
+  if (!dx && !dy) {
+    Serial.println("Pas de mouvements nécessaire");
+    return;
+  }
   Serial.printf("Moving by x: %d, y:%d\n", dx, dy);
-  int theta = atan2(dx, dy)*(180/PI);
-  int d_theta = (theta - odometry_status.current_angle) % 360;
+  int theta = (int(360 - atan2(dy, dx)*(180/PI))) % 360;
+  Serial.printf("theta: %d\n", theta);
+  int d_theta = ((theta - odometry_status.current_angle + 180) % 360) - 180;
   int z = droite(dx, dy);
   tourner(d_theta);
   avancer(z);
-  odometry_status.current_angle += d_theta;
+  // odometry_status.current_angle += d_theta;
+  int bf = odometry_status.current_angle;
+  odometry_status.current_angle = (odometry_status.current_angle + d_theta) % 360;
   odometry_status.current_x += dx;
   odometry_status.current_y += dy;
   Serial.printf("dx: %d, dy: %d, dθ: %d\n", dx, dy, d_theta);
+  Serial.printf("moving by %d from %d to %d\n", d_theta, bf, odometry_status.current_angle);
   // if (obstacle() == true){
   //   tourner(90);
   //   avancer(LONGUEURCAPLA);
