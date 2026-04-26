@@ -52,7 +52,7 @@ float step_to_distance(int s) {
 }
 
 int avancer(int d){ // parametre en millimetre
-  int initial_pos = stepper1.getCurrentPosition();
+  int32_t start_steps = stepper1.getCurrentPosition();
   stepper2.move(distance_to_step(d));
   stepper1.move(-distance_to_step(d));
   
@@ -61,6 +61,9 @@ int avancer(int d){ // parametre en millimetre
       // Serial.printf("%d la fonction avance avec ces paramètres\n" , d);
       stepper2.stopMove();
       stepper1.stopMove();
+      delay(500); // prsk c'est comme ca
+      float distance_parcourue = step_to_distance(abs(start_steps-stepper1.getCurrentPosition()));
+      return distance_parcourue;
     }
   }
   return d;
@@ -107,9 +110,13 @@ void aller_a_position(int x ,int y) {
   int bf = odometry_status.current_angle;
 
   odometry_status.current_angle = (odometry_status.current_angle + tourner(d_theta)) % 360;
-  if (avancer(z) == z) {
+  int distance_parcourue = avancer(z);
+  if (distance_parcourue == z) {
     odometry_status.current_x += dx;
     odometry_status.current_y += dy;
+  } else {
+    odometry_status.current_x += distance_parcourue * cos(theta);
+    odometry_status.current_y+= distance_parcourue * sin(theta);
   }
 
   Serial.printf("dx: %d, dy: %d, dθ: %d\n", dx, dy, d_theta);
