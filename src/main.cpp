@@ -47,6 +47,23 @@ bool obstacle(){ /*Est ce que mur présent devant la tete du robot*/
   return (measure.RangeMilliMeter < DISTANCE);
 }
 
+QueueHandle_t stop_queue;
+void StopTask(void *pvParams) {
+  Serial.println("Starting stop task");
+  while (1) {
+    if (motors_state == motors_state_t::FORWARD ||
+        motors_state == motors_state_t::TURNING) {
+      VL53L0X_RangingMeasurementData_t measure;
+      lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
+      if (measure.RangeMilliMeter < DISTANCE) {
+        xQueueSend(stop_queue, NULL, 0);
+        Serial.println("detecting");
+      }
+    }
+    delay(50);
+  }
+}
+
 int distance_to_step(int d){ //d en millimètre distance à parcourir
   float var;
   int pas;
@@ -198,7 +215,10 @@ void setup() {
   Wire.setPins(14, 13);
   lox.begin();
   int v = 1;
-  int f = v*51200 ;
+  int f = v*51200;
+
+  stop_queue = xQueueCreate(1, 0);
+  xTaskCreate(StopTask, "StopTask", 2048, NULL, 2, NULL);
 
   /*Serial.println("Adafruit VL53L0X test");
   if (!lox.begin()) {
