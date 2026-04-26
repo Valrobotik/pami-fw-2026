@@ -39,14 +39,6 @@ typedef enum motors_state_t {
 } motors_state_t;
 motors_state_t motors_state = motors_state_t::OFF;
 
-bool obstacle(){ /*Est ce que mur présent devant la tete du robot*/
-  VL53L0X_RangingMeasurementData_t measure;
-  lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
-  delay(10);    
-  // Serial.println(measure.RangeMilliMeter);
-  return (measure.RangeMilliMeter < DISTANCE);
-}
-
 QueueHandle_t stop_queue;
 void StopTask(void *pvParams) {
   Serial.println("Starting stop task");
@@ -83,7 +75,7 @@ int avancer(int d){ // parametre en millimetre
   stepper1.move(-distance_to_step(d));
   
   while (stepper2.isRunning()&& stepper1.isRunning()){
-    if (obstacle() == true){
+    if (xQueueReceive(stop_queue, NULL, pdMS_TO_TICKS(50)) == pdTRUE) {
       // Serial.printf("%d la fonction avance avec ces paramètres\n" , d);
       stepper2.stopMove();
       stepper1.stopMove();
@@ -104,7 +96,7 @@ int tourner(int rot){ // paramètre en degré, largeur en millimetre
   stepper1.move(-distance_to_step((-LARGEUR*PI*rot)/360));
   // Serial.printf("%d %d la fonction tourne avec ces paramètres\n", rot);
   while (stepper2.isRunning()&& stepper1.isRunning()){
-    if (obstacle() == true){
+    if (xQueueReceive(stop_queue, NULL, pdMS_TO_TICKS(50)) == pdTRUE) {
       stepper2.stopMove();
       stepper1.stopMove();
       motors_state = motors_state_t::STOPPING;
@@ -153,13 +145,6 @@ void aller_a_position(int x ,int y) {
 
   Serial.printf("dx: %d, dy: %d, dθ: %d\n", dx, dy, d_theta);
   Serial.printf("moving by %d from %d to %d\n", d_theta, bf, odometry_status.current_angle);
-  // if (obstacle() == true){
-  //   tourner(90);
-  //   avancer(LONGUEURCAPLA);
-  //   tourner(-90);
-  //   avancer(droite(x,y) - droite(current_x, current_y));
-  // }
-  
 }
 // A faire : -rajouter une position initiale de réference !
 //- rajouter une procédure en cas d'obstacle pour le contourner ou simplement créer une nouvelle trajectoire non linéaire
