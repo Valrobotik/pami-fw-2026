@@ -10,6 +10,7 @@ public:
     bool isRunning() const;
     void stopMove();
     int32_t getCurrentPosition() const;
+    bool disableOutputs();
      
 private:
     FastAccelStepper* m_stepper;

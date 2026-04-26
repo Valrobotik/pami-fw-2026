@@ -30,6 +30,7 @@ void Stepper::init() {
 MoveResultCode Stepper::move(int32_t move, bool blocking)
 {
     return m_stepper->move(move, blocking);
+    m_stepper->disableOutputs();
 }
 
 bool Stepper::isRunning() const
@@ -44,4 +45,9 @@ void Stepper::stopMove() {
 int32_t Stepper::getCurrentPosition() const
 {
     return m_stepper->getCurrentPosition();
+}
+
+bool Stepper::disableOutputs()
+{
+    return m_stepper->disableOutputs();
 }
