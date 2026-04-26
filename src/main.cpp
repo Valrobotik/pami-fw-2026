@@ -30,6 +30,14 @@ typedef struct odometry_status_t {
 } odometry_status_t;
 odometry_status_t odometry_status {};
 
+typedef enum motors_state_t {
+  OFF,
+  TURNING,
+  FORWARD,
+  WAITING,
+  STOPPING,
+} motors_state_t;
+motors_state_t motors_state = motors_state_t::OFF;
 
 bool obstacle(){ /*Est ce que mur présent devant la tete du robot*/
   VL53L0X_RangingMeasurementData_t measure;
@@ -52,6 +60,7 @@ float step_to_distance(int s) {
 }
 
 int avancer(int d){ // parametre en millimetre
+  motors_state = motors_state_t::FORWARD;
   int32_t start_steps = stepper1.getCurrentPosition();
   stepper2.move(distance_to_step(d));
   stepper1.move(-distance_to_step(d));
@@ -63,13 +72,16 @@ int avancer(int d){ // parametre en millimetre
       stepper1.stopMove();
       delay(500); // prsk c'est comme ca
       float distance_parcourue = step_to_distance(abs(start_steps-stepper1.getCurrentPosition()));
+      motors_state = motors_state_t::WAITING;
       return distance_parcourue;
     }
   }
+  motors_state = motors_state_t::WAITING;
   return d;
 }
 
 int tourner(int rot){ // paramètre en degré, largeur en millimetre 
+  motors_state = motors_state_t::TURNING;
   int32_t start_steps = stepper2.getCurrentPosition();
   stepper2.move(distance_to_step((LARGEUR*PI*rot)/360));
   stepper1.move(-distance_to_step((-LARGEUR*PI*rot)/360));
@@ -78,13 +90,16 @@ int tourner(int rot){ // paramètre en degré, largeur en millimetre
     if (obstacle() == true){
       stepper2.stopMove();
       stepper1.stopMove();
+      motors_state = motors_state_t::STOPPING;
       delay(500); // prsk c'est comme ca
       float distance_parcourue = -step_to_distance(abs(start_steps-stepper2.getCurrentPosition()));
       Serial.printf("distance parcourue: %f\n", distance_parcourue);
       Serial.printf("returned: %d\n", int((distance_parcourue * 360)/(LARGEUR*PI)));
+      motors_state = motors_state_t::WAITING;
       return int((distance_parcourue * 360)/(LARGEUR*PI));
     }
   }
+  motors_state = motors_state_t::WAITING;
   return rot;
 }
 
@@ -194,6 +209,7 @@ void setup() {
   engine.init();
   stepper1.init();
   stepper2.init();
+  motors_state = motors_state_t::WAITING;
 
 
   // Commander
