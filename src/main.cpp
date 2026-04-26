@@ -41,7 +41,7 @@ motors_state_t motors_state = motors_state_t::OFF;
 
 QueueHandle_t stop_queue;
 void StopTask(void *pvParams) {
-  Serial.println("Starting stop task");
+  Serial.println("Started stop task");
   while (1) {
     if (motors_state == motors_state_t::FORWARD ||
         motors_state == motors_state_t::TURNING) {
@@ -79,7 +79,7 @@ int avancer(int d){ // parametre en millimetre
       // Serial.printf("%d la fonction avance avec ces paramètres\n" , d);
       stepper2.stopMove();
       stepper1.stopMove();
-      delay(500); // prsk c'est comme ca
+      delay(1000); // prsk c'est comme ca
       float distance_parcourue = step_to_distance(abs(start_steps-stepper1.getCurrentPosition()));
       motors_state = motors_state_t::WAITING;
       return distance_parcourue;
@@ -100,7 +100,7 @@ int tourner(int rot){ // paramètre en degré, largeur en millimetre
       stepper2.stopMove();
       stepper1.stopMove();
       motors_state = motors_state_t::STOPPING;
-      delay(500); // prsk c'est comme ca
+      delay(1000); // prsk c'est comme ca
       float distance_parcourue = -step_to_distance(abs(start_steps-stepper2.getCurrentPosition()));
       Serial.printf("distance parcourue: %f\n", distance_parcourue);
       Serial.printf("returned: %d\n", int((distance_parcourue * 360)/(LARGEUR*PI)));
@@ -153,6 +153,19 @@ void aller_a_position(int x ,int y) {
 // Coordonnées des capla à avoir avec le wifi, sinon pas possible de différencier le mur et les capla et donc ce qu'il faudrait contourner dans la trajectoire
 // Donc faire une fonction capla qui connait la coordonées du capla à eviter si il est sur notre droit de trajectoire et decaler notre trajectoire
 
+void MoveTask(void *pvParams) {
+  Serial.println("Started move task");
+  while (1) {
+    if (motors_state == motors_state_t::WAITING &&
+       (odometry_status.current_x != odometry_status.target_x ||
+        odometry_status.current_x != odometry_status.target_x)) {
+          Serial.println("Target not reached, moving again....");
+          aller_a_position(odometry_status.target_x, odometry_status.target_y);
+        }
+    delay(50);
+  }
+}
+
 void doGoPos(char *cmd) {
   aller_a_position(odometry_status.target_x, odometry_status.target_y);
   Serial.println("going to 100;100");
@@ -204,6 +217,7 @@ void setup() {
 
   stop_queue = xQueueCreate(1, 0);
   xTaskCreate(StopTask, "StopTask", 2048, NULL, 2, NULL);
+  xTaskCreate(MoveTask, "MoveTask", 2048, NULL, 2, NULL);
 
   /*Serial.println("Adafruit VL53L0X test");
   if (!lox.begin()) {
@@ -228,13 +242,7 @@ void setup() {
   command.add('P', doPrintOdoStatus);
 }
 
-uint32_t elapsed = 0;
-bool a = false;
-
 void loop() {
-  //  if (millis() > elapsed + 2000) {
-  //    a = !a;
-  //    elapsed = millis();
-  //  }
   command.run(); 
+  delay(10);
 }
