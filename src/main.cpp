@@ -2,6 +2,7 @@
 #include <FastAccelStepper.h>
 #include <Adafruit_VL53L0X.h>
 #include "Commander.h"
+#include <FastLED.h>
 
 #include "pin_definitions.h"
 #include "motor.h"
@@ -18,6 +19,8 @@ Commander command = Commander(Serial);
 extern FastAccelStepperEngine engine;
 Stepper stepper1 = Stepper(DIR_1_PIN, STEP_1_PIN, SLEEP_1_PIN, VREF_1_PIN, EN_1_PIN, 300);
 Stepper stepper2 = Stepper(DIR_2_PIN, STEP_2_PIN, SLEEP_2_PIN, VREF_2_PIN, EN_2_PIN, 300);
+
+CRGB led[1];
 
 typedef struct odometry_status_t {
   int current_x = 0;
@@ -40,17 +43,43 @@ typedef enum motors_state_t {
 motors_state_t motors_state = motors_state_t::OFF;
 
 QueueHandle_t stop_queue;
+bool obstacle_detected = false;
 void StopTask(void *pvParams) {
   Serial.println("Started stop task");
   while (1) {
-    if (motors_state == motors_state_t::FORWARD ||
-        motors_state == motors_state_t::TURNING) {
-      VL53L0X_RangingMeasurementData_t measure;
-      lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
-      if (measure.RangeMilliMeter < DISTANCE) {
-        xQueueSend(stop_queue, NULL, 0); // TODO: change
-      }
+    VL53L0X_RangingMeasurementData_t measure;
+    lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
+    if (measure.RangeMilliMeter < DISTANCE) {
+      obstacle_detected = true;
+      xQueueSend(stop_queue, NULL, 0); // TODO: change
+    } else {
+      obstacle_detected = false;
     }
+    delay(50);
+  }
+}
+
+void LightTask(void *pvParams) {
+  Serial.println("Started light task");
+  while (1) {
+    switch (motors_state) {
+    case motors_state_t::OFF:
+      led[0] = CRGB::Red1;
+      break;
+    case motors_state_t::TURNING:
+      led[0] = CRGB::Yellow2;
+      break;
+    case motors_state_t::FORWARD:
+      led[0] = CRGB::Blue2;
+      break;
+    case motors_state_t::WAITING:
+      led[0] = CRGB::Green;
+      break;
+    }
+    if (obstacle_detected && (millis() % 500) < 100) {
+      led[0] = CRGB::Red3;
+    }
+    FastLED.show();
     delay(50);
   }
 }
@@ -60,7 +89,7 @@ void bras_noisette(){
     ledcWrite(BUZZER_PIN, pos);
     delay(10);
   }
-  for (int pos = 255; pos >= 0; pos++) {  // go from 180-0 degrees
+  for (int pos = 255; pos >= 0; pos--) {  // go from 180-0 degrees
     ledcWrite(BUZZER_PIN, pos);
     delay(10);
   }
@@ -152,6 +181,7 @@ void aller_a_position(int x ,int y) {
 
   Serial.printf("dx: %d, dy: %d, dθ: %d\n", dx, dy, d_theta);
   Serial.printf("moving by %d from %d to %d\n", d_theta, bf, odometry_status.current_angle);
+  motors_state = motors_state_t::WAITING;
 }
 // A faire : -rajouter une position initiale de réference !
 //- rajouter une procédure en cas d'obstacle pour le contourner ou simplement créer une nouvelle trajectoire non linéaire
@@ -225,21 +255,18 @@ void setup() {
   stop_queue = xQueueCreate(1, 0);
   xTaskCreate(StopTask, "StopTask", 2048, NULL, 2, NULL);
   xTaskCreate(MoveTask, "MoveTask", 2048, NULL, 2, NULL);
+  xTaskCreate(LightTask, "LightTask", 2048, NULL, 2, NULL);
+  
+  FastLED.addLeds<WS2812B, RGB_PIN, GRB>(led, 1);
 
   // Bras servo init
   if (ledcAttach(SERVO_PIN, 60, 12))
     Serial.println("init");
 
-  /*Serial.println("Adafruit VL53L0X test");
-  if (!lox.begin()) {
-    Serial.println(F("Failed to boot VL53L0X"));
-    while(1);*/
-
   engine.init();
   stepper1.init();
   stepper2.init();
   motors_state = motors_state_t::WAITING;
-
 
   // Commander
   command.verbose = VerboseMode::user_friendly;
@@ -255,6 +282,6 @@ void setup() {
 }
 
 void loop() {
-  command.run(); 
+  command.run();
   delay(10);
 }
