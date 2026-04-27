@@ -2,7 +2,6 @@
 #include <FastAccelStepper.h>
 #include <Adafruit_VL53L0X.h>
 #include "Commander.h"
-#include <ESP32Servo.h>
 
 #include "pin_definitions.h"
 #include "motor.h"
@@ -11,9 +10,6 @@
 #define LARGEUR 123// en millimètre largeur entre les 2 roues
 #define DISTANCE 100 // en millimetre, distance avant le mur
 #define LONGUEURCAPLA 100 // en millimetre, longueur d'un obstacle
-
-Servo bras;
-
 
 Adafruit_VL53L0X lox = Adafruit_VL53L0X();
  
@@ -60,12 +56,14 @@ void StopTask(void *pvParams) {
 }
 
 void bras_noisette(){
-  bras.setPeriodHertz(50); // Fréquence PWM pour le bras
-  bras.attach(39); // Largeur minimale et maximale de l'impulsion (en µs) pour aller de 0° à 180°
-  for (int pos = 0; pos <= 180; pos += 1) {  // go from 0-180 degrees
-    bras.write(pos);}
-  for (int pos = 180; pos >= 0 ; pos += 1) {  // go from 180-0 degrees
-    bras.write(pos);}
+  for (int pos = 0; pos < 256; pos++) {  // go from 0-180 degrees
+    ledcWrite(BUZZER_PIN, pos);
+    delay(10);
+  }
+  for (int pos = 255; pos >= 0; pos++) {  // go from 180-0 degrees
+    ledcWrite(BUZZER_PIN, pos);
+    delay(10);
+  }
 }
 
 int distance_to_step(int d){ //d en millimètre distance à parcourir
@@ -228,6 +226,10 @@ void setup() {
   xTaskCreate(StopTask, "StopTask", 2048, NULL, 2, NULL);
   xTaskCreate(MoveTask, "MoveTask", 2048, NULL, 2, NULL);
 
+  // Bras servo init
+  if (ledcAttach(SERVO_PIN, 60, 12))
+    Serial.println("init");
+
   /*Serial.println("Adafruit VL53L0X test");
   if (!lox.begin()) {
     Serial.println(F("Failed to boot VL53L0X"));
@@ -249,8 +251,6 @@ void setup() {
   command.add('j', doSetCurrentY);
   command.add('P', doPrintOdoStatus);
 
-
-  
   bras_noisette();
 }
 
