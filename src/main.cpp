@@ -3,6 +3,7 @@
 #include <Adafruit_VL53L0X.h>
 #include "Commander.h"
 #include <FastLED.h>
+#include <WiFi.h>
 
 #include "pin_definitions.h"
 #include "motor.h"
