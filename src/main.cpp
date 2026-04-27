@@ -2,6 +2,7 @@
 #include <FastAccelStepper.h>
 #include <Adafruit_VL53L0X.h>
 #include "Commander.h"
+#include <ESP32Servo.h>
 
 #include "pin_definitions.h"
 #include "motor.h"
@@ -10,6 +11,9 @@
 #define LARGEUR 123// en millimètre largeur entre les 2 roues
 #define DISTANCE 100 // en millimetre, distance avant le mur
 #define LONGUEURCAPLA 100 // en millimetre, longueur d'un obstacle
+
+Servo bras;
+
 
 Adafruit_VL53L0X lox = Adafruit_VL53L0X();
  
@@ -53,6 +57,15 @@ void StopTask(void *pvParams) {
     }
     delay(50);
   }
+}
+
+void bras_noisette(){
+  bras.setPeriodHertz(50); // Fréquence PWM pour le bras
+  bras.attach(39); // Largeur minimale et maximale de l'impulsion (en µs) pour aller de 0° à 180°
+  for (int pos = 0; pos <= 180; pos += 1) {  // go from 0-180 degrees
+    bras.write(pos);}
+  for (int pos = 180; pos >= 0 ; pos += 1) {  // go from 180-0 degrees
+    bras.write(pos);}
 }
 
 int distance_to_step(int d){ //d en millimètre distance à parcourir
@@ -149,7 +162,7 @@ void aller_a_position(int x ,int y) {
 // Coordonnées des capla à avoir avec le wifi, sinon pas possible de différencier le mur et les capla et donc ce qu'il faudrait contourner dans la trajectoire
 // Donc faire une fonction capla qui connait la coordonées du capla à eviter si il est sur notre droit de trajectoire et decaler notre trajectoire
 
-void MoveTask(void *pvParams) {
+void MoveTask(void *pvParams){
   Serial.println("Started move task");
   while (1) {
     if (motors_state == motors_state_t::WAITING &&
@@ -235,6 +248,10 @@ void setup() {
   command.add('i', doSetCurrentX);
   command.add('j', doSetCurrentY);
   command.add('P', doPrintOdoStatus);
+
+
+  
+  bras_noisette();
 }
 
 void loop() {
