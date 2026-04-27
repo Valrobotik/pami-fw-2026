@@ -48,8 +48,7 @@ void StopTask(void *pvParams) {
       VL53L0X_RangingMeasurementData_t measure;
       lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
       if (measure.RangeMilliMeter < DISTANCE) {
-        xQueueSend(stop_queue, NULL, 0);
-        Serial.println("detecting");
+        xQueueSend(stop_queue, NULL, 0); // TODO: change
       }
     }
     delay(50);
@@ -76,7 +75,6 @@ int avancer(int d){ // parametre en millimetre
   
   while (stepper2.isRunning()&& stepper1.isRunning()){
     if (xQueueReceive(stop_queue, NULL, pdMS_TO_TICKS(50)) == pdTRUE) {
-      // Serial.printf("%d la fonction avance avec ces paramètres\n" , d);
       stepper2.stopMove();
       stepper1.stopMove();
       delay(1000); // prsk c'est comme ca
@@ -94,7 +92,6 @@ int tourner(int rot){ // paramètre en degré, largeur en millimetre
   int32_t start_steps = stepper2.getCurrentPosition();
   stepper2.move(distance_to_step((LARGEUR*PI*rot)/360));
   stepper1.move(-distance_to_step((-LARGEUR*PI*rot)/360));
-  // Serial.printf("%d %d la fonction tourne avec ces paramètres\n", rot);
   while (stepper2.isRunning()&& stepper1.isRunning()){
     if (xQueueReceive(stop_queue, NULL, pdMS_TO_TICKS(50)) == pdTRUE) {
       stepper2.stopMove();
@@ -102,8 +99,8 @@ int tourner(int rot){ // paramètre en degré, largeur en millimetre
       motors_state = motors_state_t::STOPPING;
       delay(1000); // prsk c'est comme ca
       float distance_parcourue = -step_to_distance(abs(start_steps-stepper2.getCurrentPosition()));
-      Serial.printf("distance parcourue: %f\n", distance_parcourue);
-      Serial.printf("returned: %d\n", int((distance_parcourue * 360)/(LARGEUR*PI)));
+      // Serial.printf("distance parcourue: %f\n", distance_parcourue);
+      // Serial.printf("returned: %d\n", int((distance_parcourue * 360)/(LARGEUR*PI)));
       motors_state = motors_state_t::WAITING;
       return int((distance_parcourue * 360)/(LARGEUR*PI));
     }
@@ -128,7 +125,6 @@ void aller_a_position(int x ,int y) {
   }
   Serial.printf("Moving by x: %d, y:%d\n", dx, dy);
   int theta = (int(360 - atan2(dy, dx)*(180/PI))) % 360;
-  Serial.printf("theta: %d\n", theta);
   int d_theta = ((theta - odometry_status.current_angle + 180) % 360) - 180;
   int z = droite(dx, dy);
   int bf = odometry_status.current_angle;
@@ -168,7 +164,7 @@ void MoveTask(void *pvParams) {
 
 void doGoPos(char *cmd) {
   aller_a_position(odometry_status.target_x, odometry_status.target_y);
-  Serial.println("going to 100;100");
+  Serial.printf("going to %d;%d\n", odometry_status.target_x, odometry_status.target_y);
 }
 
 void doSetTargetX(char *cmd) {
@@ -211,7 +207,7 @@ void doPrintOdoStatus(char *cmd) {
 void setup() {
   Serial.begin(115200);
   Wire.setPins(14, 13);
-  lox.begin();
+  lox.begin(); // TODO: check for init
   int v = 1;
   int f = v*51200;
 
@@ -224,7 +220,6 @@ void setup() {
     Serial.println(F("Failed to boot VL53L0X"));
     while(1);*/
 
-  Serial.println(f);
   engine.init();
   stepper1.init();
   stepper2.init();
