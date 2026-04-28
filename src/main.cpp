@@ -279,7 +279,8 @@ void setup() {
   command.add('j', doSetCurrentY);
   command.add('P', doPrintOdoStatus);
 
-  bras_noisette();
+  Serial.printf("Connection to ap: %s\n", ENV_WIFI_PASSWORD);
+  WiFi.begin(ENV_WIFI_SSID, ENV_WIFI_PASSWORD);
 }
 
 void loop() {
