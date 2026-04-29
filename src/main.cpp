@@ -4,6 +4,12 @@
 #include "Commander.h"
 #include <FastLED.h>
 
+#include <micro_ros_platformio.h>
+#include <rcl/rcl.h>
+#include <rclc/rclc.h>
+#include <rclc/executor.h>
+#include <std_msgs/msg/bool.h>
+
 #include "pin_definitions.h"
 #include "motor.h"
 
@@ -11,6 +17,15 @@
 #define LARGEUR 123// en millimètre largeur entre les 2 roues
 #define DISTANCE 100 // en millimetre, distance avant le mur
 #define LONGUEURCAPLA 100 // en millimetre, longueur d'un obstacle
+
+// ROS
+#define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){Serial.println("Erreur ROS");}}
+
+rcl_publisher_t publisher;
+std_msgs__msg__Bool msg;
+rclc_support_t support;
+rcl_allocator_t allocator;
+rcl_node_t node;
 
 Adafruit_VL53L0X lox = Adafruit_VL53L0X();
  
@@ -243,6 +258,8 @@ void doPrintOdoStatus(char *cmd) {
 
   Serial.printf("Target X:\t %d\n", odometry_status.target_x);
   Serial.printf("Target Y:\t %d\n", odometry_status.target_y);
+
+  RCCHECK(rcl_publish(&publisher, &msg, NULL));
 }
 
 void setup() {
@@ -279,6 +296,18 @@ void setup() {
   command.add('P', doPrintOdoStatus);
 
   Serial.printf("Connecting to ap: %s\n", ENV_WIFI_PASSWORD);
+  IPAddress agent_ip(ENV_AGENT_IP);
+  uint16_t agent_port = 8888;
+  set_microros_wifi_transports(ENV_WIFI_SSID, ENV_WIFI_PASSWORD, agent_ip, agent_port);
+  delay(2000);
+  allocator = rcl_get_default_allocator();
+  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+  RCCHECK(rclc_node_init_default(&node, "micro_ros_wifi_node", "", &support));
+  RCCHECK(rclc_publisher_init_best_effort(
+    &publisher,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+    "obstacle"));
 }
 
 void loop() {
