@@ -3,7 +3,6 @@
 #include <Adafruit_VL53L0X.h>
 #include "Commander.h"
 #include <FastLED.h>
-#include <WiFi.h>
 
 #include "pin_definitions.h"
 #include "motor.h"
@@ -279,8 +278,7 @@ void setup() {
   command.add('j', doSetCurrentY);
   command.add('P', doPrintOdoStatus);
 
-  Serial.printf("Connection to ap: %s\n", ENV_WIFI_PASSWORD);
-  WiFi.begin(ENV_WIFI_SSID, ENV_WIFI_PASSWORD);
+  Serial.printf("Connecting to ap: %s\n", ENV_WIFI_PASSWORD);
 }
 
 void loop() {
