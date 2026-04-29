@@ -264,6 +264,21 @@ void doPrintOdoStatus(char *cmd) {
 
 void setup() {
   Serial.begin(115200);
+  Serial.printf("Connecting to ap: %s\n", ENV_WIFI_PASSWORD);
+  IPAddress agent_ip(ENV_AGENT_IP);
+  uint16_t agent_port = 8888;
+  set_microros_wifi_transports(ENV_WIFI_SSID, ENV_WIFI_PASSWORD, agent_ip, agent_port);
+  delay(2000);
+  allocator = rcl_get_default_allocator();
+  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+  RCCHECK(rclc_node_init_default(&node, "micro_ros_wifi_node", "", &support));
+  RCCHECK(rclc_publisher_init_best_effort(
+    &publisher,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+    "obstacle"));
+  delay(2000);
+
   Wire.setPins(14, 13);
   lox.begin(); // TODO: check for init
   int v = 1;
@@ -294,20 +309,6 @@ void setup() {
   command.add('i', doSetCurrentX);
   command.add('j', doSetCurrentY);
   command.add('P', doPrintOdoStatus);
-
-  Serial.printf("Connecting to ap: %s\n", ENV_WIFI_PASSWORD);
-  IPAddress agent_ip(ENV_AGENT_IP);
-  uint16_t agent_port = 8888;
-  set_microros_wifi_transports(ENV_WIFI_SSID, ENV_WIFI_PASSWORD, agent_ip, agent_port);
-  delay(2000);
-  allocator = rcl_get_default_allocator();
-  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
-  RCCHECK(rclc_node_init_default(&node, "micro_ros_wifi_node", "", &support));
-  RCCHECK(rclc_publisher_init_best_effort(
-    &publisher,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
-    "obstacle"));
 }
 
 void loop() {
