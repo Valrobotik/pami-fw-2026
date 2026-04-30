@@ -9,6 +9,8 @@
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
 #include <std_msgs/msg/bool.h>
+#include <geometry_msgs/msg/pose.h>
+
 
 #include "pin_definitions.h"
 #include "motor.h"
@@ -22,7 +24,9 @@
 #define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){Serial.println("Erreur ROS");}}
 
 rcl_publisher_t publisher;
+rcl_publisher_t publisher_pose;
 std_msgs__msg__Bool msg;
+geometry_msgs__msg__Pose msg_pose;
 rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
@@ -259,6 +263,14 @@ void doPrintOdoStatus(char *cmd) {
   Serial.printf("Target X:\t %d\n", odometry_status.target_x);
   Serial.printf("Target Y:\t %d\n", odometry_status.target_y);
 
+  msg_pose.position.x = odometry_status.current_x;
+  msg_pose.position.y = odometry_status.current_y;
+  msg_pose.position.z = 0;
+  msg_pose.orientation.x = 0;
+  msg_pose.orientation.y = 0;
+  msg_pose.orientation.z = 1;
+  msg_pose.orientation.w = odometry_status.current_angle;
+  RCCHECK(rcl_publish(&publisher_pose, &msg_pose, NULL));
   RCCHECK(rcl_publish(&publisher, &msg, NULL));
 }
 
@@ -277,6 +289,11 @@ void setup() {
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
     "obstacle"));
+  RCCHECK(rclc_publisher_init_best_effort(
+    &publisher_pose,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Pose),
+    "pami/position"));
   delay(2000);
 
   Wire.setPins(14, 13);
