@@ -243,7 +243,7 @@ void MoveTask(void *pvParams){
   while (1) {
     if (motors_state == motors_state_t::WAITING &&
        (odometry_status.current_x != odometry_status.target_x ||
-        odometry_status.current_x != odometry_status.target_x)) {
+        odometry_status.current_y != odometry_status.target_y)) {
           Serial.println("Target not reached, moving again....");
           aller_a_position(odometry_status.target_x, odometry_status.target_y);
         }
