@@ -114,8 +114,9 @@ void ros_update_odometry() {
   msg_pose.position.z = 0;
   msg_pose.orientation.x = 0;
   msg_pose.orientation.y = 0;
-  msg_pose.orientation.z = 1;
-  msg_pose.orientation.w = odometry_status.current_angle;
+  double half_theta = (odometry_status.current_angle * PI / 180.0) * 0.5;
+  msg_pose.orientation.z = sin(half_theta);
+  msg_pose.orientation.w = cos(half_theta);
   RCCHECK(rcl_publish(&publisher_pose, &msg_pose, NULL));
 }
 
