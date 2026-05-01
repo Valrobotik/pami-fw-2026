@@ -113,8 +113,8 @@ void ros_update_odometry() {
   msg_pose.header.stamp.sec = 0;
   msg_pose.header.stamp.nanosec = 0;
   rosidl_runtime_c__String__assign(&msg_pose.header.frame_id, "world");
-  msg_pose.pose.position.x = odometry_status.current_x;
-  msg_pose.pose.position.y = odometry_status.current_y;
+  msg_pose.pose.position.x = ((double) odometry_status.current_x)/1000;
+  msg_pose.pose.position.y = ((double)odometry_status.current_y)/1000;
   msg_pose.pose.position.z = 0;
   msg_pose.pose.orientation.x = 0;
   msg_pose.pose.orientation.y = 0;
