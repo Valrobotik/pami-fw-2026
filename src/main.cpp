@@ -160,12 +160,15 @@ float step_to_distance(int s) {
   return (s*DIAMETRE_ROUE*PI)/51200;
 }
 
-int avancer(int d){ // parametre en millimetre
+int avancer(int d, int theta){ // parametre en millimetre
   motors_state = motors_state_t::FORWARD;
   int32_t start_steps = stepper1.getCurrentPosition();
   stepper2.move(distance_to_step(d));
   stepper1.move(-distance_to_step(d));
-  
+  // C'est pas sincère mais bon...
+  int x = odometry_status.current_x;
+  int y = odometry_status.current_y;
+  int32_t d_steps = stepper1.getCurrentPosition();
   while (stepper2.isRunning()&& stepper1.isRunning()){
     if (xQueueReceive(stop_queue, NULL, pdMS_TO_TICKS(50)) == pdTRUE) {
       stepper2.stopMove();
@@ -175,8 +178,14 @@ int avancer(int d){ // parametre en millimetre
       motors_state = motors_state_t::WAITING;
       return distance_parcourue;
     }
+    float distance_parcourue = step_to_distance(abs(d_steps-stepper1.getCurrentPosition()));
+    d_steps = stepper1.getCurrentPosition();
+    odometry_status.current_x += distance_parcourue * cos(theta);
+    odometry_status.current_y+= distance_parcourue * sin(theta);
   }
   motors_state = motors_state_t::WAITING;
+  odometry_status.current_x = x;
+  odometry_status.current_y = y;
   return d;
 }
 
@@ -223,7 +232,7 @@ void aller_a_position(int x ,int y) {
   int bf = odometry_status.current_angle;
 
   odometry_status.current_angle = (odometry_status.current_angle + tourner(d_theta)) % 360;
-  int distance_parcourue = avancer(z);
+  int distance_parcourue = avancer(z, theta);
   if (distance_parcourue == z) {
     odometry_status.current_x += dx;
     odometry_status.current_y += dy;
