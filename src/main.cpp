@@ -22,6 +22,11 @@
 
 // ROS
 #define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){Serial.println("Erreur ROS");}}
+#define EXECUTE_EVERY_N_MS(MS, X)  do { \
+  static volatile int64_t init = -1; \
+  if (init == -1) { init = uxr_millis();} \
+  if (uxr_millis() - init > MS) { X; init = uxr_millis();} \
+} while (0) \
 
 rcl_publisher_t publisher;
 rcl_publisher_t publisher_pose;
@@ -100,6 +105,30 @@ void LightTask(void *pvParams) {
     }
     FastLED.show();
     delay(50);
+  }
+}
+
+void ros_update_odometry() {
+  msg_pose.position.x = odometry_status.current_x;
+  msg_pose.position.y = odometry_status.current_y;
+  msg_pose.position.z = 0;
+  msg_pose.orientation.x = 0;
+  msg_pose.orientation.y = 0;
+  msg_pose.orientation.z = 1;
+  msg_pose.orientation.w = odometry_status.current_angle;
+  RCCHECK(rcl_publish(&publisher_pose, &msg_pose, NULL));
+}
+
+void ros_update_obstacle() {
+  msg.data = obstacle_detected;
+  RCCHECK(rcl_publish(&publisher, &msg, NULL));
+}
+
+void RosTask(void *pvParams) {
+  while (1) {
+    EXECUTE_EVERY_N_MS(100, ros_update_obstacle());
+    EXECUTE_EVERY_N_MS(100, ros_update_odometry());
+    delay(20);
   }
 }
 
@@ -262,16 +291,6 @@ void doPrintOdoStatus(char *cmd) {
 
   Serial.printf("Target X:\t %d\n", odometry_status.target_x);
   Serial.printf("Target Y:\t %d\n", odometry_status.target_y);
-
-  msg_pose.position.x = odometry_status.current_x;
-  msg_pose.position.y = odometry_status.current_y;
-  msg_pose.position.z = 0;
-  msg_pose.orientation.x = 0;
-  msg_pose.orientation.y = 0;
-  msg_pose.orientation.z = 1;
-  msg_pose.orientation.w = odometry_status.current_angle;
-  RCCHECK(rcl_publish(&publisher_pose, &msg_pose, NULL));
-  RCCHECK(rcl_publish(&publisher, &msg, NULL));
 }
 
 void setup() {
@@ -305,6 +324,7 @@ void setup() {
   xTaskCreate(StopTask, "StopTask", 2048, NULL, 2, NULL);
   xTaskCreate(MoveTask, "MoveTask", 2048, NULL, 2, NULL);
   xTaskCreate(LightTask, "LightTask", 2048, NULL, 2, NULL);
+  xTaskCreate(RosTask, "RosTask", 4096, NULL, 2, NULL);
   
   FastLED.addLeds<WS2812B, RGB_PIN, GRB>(led, 1);
 
