@@ -276,7 +276,7 @@ void doPrintOdoStatus(char *cmd) {
 
 void setup() {
   Serial.begin(115200);
-  Serial.printf("Connecting to ap: %s\n", ENV_WIFI_PASSWORD);
+  Serial.printf("Connecting to ap: %s\n", ENV_WIFI_SSID);
   IPAddress agent_ip(ENV_AGENT_IP);
   uint16_t agent_port = 8888;
   set_microros_wifi_transports(ENV_WIFI_SSID, ENV_WIFI_PASSWORD, agent_ip, agent_port);
