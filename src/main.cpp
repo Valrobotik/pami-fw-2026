@@ -9,7 +9,8 @@
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
 #include <std_msgs/msg/bool.h>
-#include <geometry_msgs/msg/pose.h>
+#include <geometry_msgs/msg/pose_stamped.h>
+#include <rosidl_runtime_c/string_functions.h>
 
 
 #include "pin_definitions.h"
@@ -31,7 +32,7 @@
 rcl_publisher_t publisher;
 rcl_publisher_t publisher_pose;
 std_msgs__msg__Bool msg;
-geometry_msgs__msg__Pose msg_pose;
+geometry_msgs__msg__PoseStamped msg_pose;
 rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
@@ -109,14 +110,17 @@ void LightTask(void *pvParams) {
 }
 
 void ros_update_odometry() {
-  msg_pose.position.x = odometry_status.current_x;
-  msg_pose.position.y = odometry_status.current_y;
-  msg_pose.position.z = 0;
-  msg_pose.orientation.x = 0;
-  msg_pose.orientation.y = 0;
+  msg_pose.header.stamp.sec = 0;
+  msg_pose.header.stamp.nanosec = 0;
+  rosidl_runtime_c__String__assign(&msg_pose.header.frame_id, "world");
+  msg_pose.pose.position.x = odometry_status.current_x;
+  msg_pose.pose.position.y = odometry_status.current_y;
+  msg_pose.pose.position.z = 0;
+  msg_pose.pose.orientation.x = 0;
+  msg_pose.pose.orientation.y = 0;
   double half_theta = (odometry_status.current_angle * PI / 180.0) * 0.5;
-  msg_pose.orientation.z = sin(half_theta);
-  msg_pose.orientation.w = cos(half_theta);
+  msg_pose.pose.orientation.z = sin(half_theta);
+  msg_pose.pose.orientation.w = cos(half_theta);
   RCCHECK(rcl_publish(&publisher_pose, &msg_pose, NULL));
 }
 
@@ -312,7 +316,7 @@ void setup() {
   RCCHECK(rclc_publisher_init_best_effort(
     &publisher_pose,
     &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Pose),
+    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
     "pami/position"));
   delay(2000);
 
