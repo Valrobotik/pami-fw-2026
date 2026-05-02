@@ -300,13 +300,13 @@ void setup() {
   int v = 1;
   int f = v*51200;
 
-  stop_queue = xQueueCreate(1, 0);
-  xTaskCreate(StopTask, "StopTask", 2048, NULL, 2, NULL);
-  xTaskCreate(MoveTask, "MoveTask", 2048, NULL, 2, NULL);
-  xTaskCreate(LightTask, "LightTask", 2048, NULL, 2, NULL);
-  xTaskCreate(RosTask, "RosTask", 4096, NULL, 2, NULL);
-  
   FastLED.addLeds<WS2812B, RGB_PIN, GRB>(led, 1);
+
+  stop_queue = xQueueCreate(1, 0);
+  xTaskCreatePinnedToCore(StopTask, "StopTask", 2048, NULL, 2, NULL, 1);
+  xTaskCreatePinnedToCore(MoveTask, "MoveTask", 2048, NULL, 2, NULL, 1);
+  xTaskCreatePinnedToCore(LightTask, "LightTask", 2048, NULL, 2, NULL, 1);
+  xTaskCreatePinnedToCore(RosTask, "RosTask", 4096, NULL, 2, NULL, 1);
 
   // Bras servo init
   if (ledcAttach(SERVO_PIN, 60, 12))
