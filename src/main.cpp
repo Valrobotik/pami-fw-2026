@@ -199,12 +199,13 @@ float droite (float x, float y ){
 }
 
 // exprime theta entre -pi et pi
-void clamp_angle(float* theta) {
-  if (*theta > PI) {
-    (*theta) -= (2 * PI);
-  } if (*theta < -PI) {
-    (*theta) += (2 * PI);
+float clamp_angle(float theta) {
+  if (theta > PI) {
+    theta -= (2 * PI);
+  } if (theta < -PI) {
+    theta += (2 * PI);
   }
+  return theta;
 }
 
 // parametre en millimetre , x et y coordonnées que l'ont veut atteindre,
@@ -223,6 +224,7 @@ void aller_a_position(float x, float y, float theta) {
   float d = droite(dx, dy);
   tourner(d_move_theta);
   avancer(d);
+  tourner(-clamp_angle(odometry.current.theta + theta));
 
   Serial.printf("dx: %.2f, dy: %.2f, dθ: %.2f\n", dx, dy, d_move_theta);
   motors_state = motors_state_t::WAITING;
