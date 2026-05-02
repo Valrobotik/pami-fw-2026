@@ -143,7 +143,6 @@ void setup() {
   xTaskCreatePinnedToCore(StopTask, "StopTask", 2048, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(MoveTask, "MoveTask", 4096, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(LightTask, "LightTask", 2048, NULL, 2, NULL, 1);
-  xTaskCreatePinnedToCore(RosTask, "RosTask", 4096, NULL, 2, NULL, 1);
 
   // Bras servo init
   if (ledcAttach(SERVO_PIN, 60, 12))

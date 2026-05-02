@@ -48,17 +48,6 @@ bool ros_update_obstacle() {
   return true;
 }
 
-void RosTask(void *pvParams) {
-  while (1) {
-    if (state == AGENT_CONNECTED) {
-      EXECUTE_EVERY_N_MS(100, ros_update_obstacle());
-      EXECUTE_EVERY_N_MS(100, ros_update_odometry());
-      rclc_executor_spin_some(&executor, RCL_MS_TO_NS(50));
-    }
-    delay(20);
-  }
-}
-
 bool create_entities() {
   allocator = rcl_get_default_allocator();
   RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
@@ -79,8 +68,10 @@ bool create_entities() {
   RCCHECK(rclc_subscription_init_default(&subscriber, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
      "/goal_pose"));
+
   RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &received_msg,
       &SubscriptionCallback, ON_NEW_DATA));
+
   return true;
 }
 
@@ -88,11 +79,11 @@ void destroy_entities() {
   rmw_context_t * rmw_context = rcl_context_get_rmw_context(&support.context);
   (void) rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
 
-  rcl_publisher_fini(&publisher, &node);
-  rcl_publisher_fini(&publisher_pose, &node);
-  rclc_executor_fini(&executor);
-  rcl_subscription_fini(&subscriber, &node);
-  rcl_node_fini(&node);
+  (void) rcl_publisher_fini(&publisher, &node);
+  (void) rcl_publisher_fini(&publisher_pose, &node);
+  (void) rclc_executor_fini(&executor);
+  (void) rcl_subscription_fini(&subscriber, &node);
+  (void) rcl_node_fini(&node);
   rclc_support_fini(&support);
 }
 
@@ -113,6 +104,11 @@ void ros_loop() {
     EXECUTE_EVERY_N_MS(200, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1))
                                         ? AGENT_CONNECTED
                                         : AGENT_DISCONNECTED;);
+    if (state == AGENT_CONNECTED) {
+        EXECUTE_EVERY_N_MS(100, ros_update_obstacle());
+        EXECUTE_EVERY_N_MS(100, ros_update_odometry());
+        rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
+    }
     break;
   case AGENT_DISCONNECTED:
     destroy_entities();
