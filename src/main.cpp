@@ -193,32 +193,40 @@ void tourner(float rot){ // rot en radian [-pi;pi]
   motors_state = motors_state_t::WAITING;
 }
 
-int droite (int x, int y ){
-  int z = sqrt(pow(x,2) + pow(y,2));
+float droite (float x, float y ){
+  float z = sqrt(pow(x,2) + pow(y,2));
   return z;
 }
 
-// parametre en millimetre , x et y coordonnées que l'ont veut atteindre,
-// theta parametre d'orientation
-// void aller_a_position(int x ,int y) {
-//   int dx = x - odometry_status.current_x;
-//   int dy = y - odometry_status.current_y;
-//   if (!dx && !dy) {
-//     Serial.println("Pas de mouvements nécessaire");
-//     return;
-//   }
-//   Serial.printf("Moving by x: %d, y:%d\n", dx, dy);
-//   int theta = (int(360 - atan2(dy, dx)*(180/PI))) % 360;
-//   int d_theta = ((theta - odometry_status.current_angle + 180) % 360) - 180;
-//   int z = droite(dx, dy);
-//   int bf = odometry_status.current_angle;
-//   tourner(d_theta);
-//   avancer(z);
+// exprime theta entre -pi et pi
+void clamp_angle(float* theta) {
+  if (*theta > PI) {
+    (*theta) -= (2 * PI);
+  } if (*theta < -PI) {
+    (*theta) += (2 * PI);
+  }
+}
 
-//   Serial.printf("dx: %d, dy: %d, dθ: %d\n", dx, dy, d_theta);
-//   Serial.printf("moving by %d from %d to %d\n", d_theta, bf, odometry_status.current_angle);
-//   motors_state = motors_state_t::WAITING;
-// }
+// parametre en millimetre , x et y coordonnées que l'ont veut atteindre,
+// theta parametre d'orientation en radian
+void aller_a_position(float x, float y, float theta) {
+  float dx = x - odometry.current.x*1000;
+  float dy = y - odometry.current.y*1000;
+  if (!dx && !dy) {
+    Serial.println("Pas de mouvements nécessaire");
+    return;
+  }
+  Serial.printf("Moving by x: %.2f, y:%.2f\n", dx, dy);
+  float move_theta = atan2(dy, dx);
+  float d_move_theta = move_theta + odometry.current.theta;
+  // clamp_angle(&d_move_theta);
+  float d = droite(dx, dy);
+  tourner(d_move_theta);
+  avancer(d);
+
+  Serial.printf("dx: %.2f, dy: %.2f, dθ: %.2f\n", dx, dy, d_move_theta);
+  motors_state = motors_state_t::WAITING;
+}
 //- rajouter une procédure en cas d'obstacle pour le contourner ou simplement créer une nouvelle trajectoire non linéaire
 
 void MoveTask(void *pvParams){
@@ -228,16 +236,15 @@ void MoveTask(void *pvParams){
     //    (odometry_status.current_x != target_pos.x ||
     //     odometry_status.current_y != target_pos.y)) {
     //       Serial.println("Target not reached, moving again....");
-    //       aller_a_position(target_pos.x, target_pos.y);
+    //       aller_a_position(target_pos.x*1000, target_pos.y*1000);
     //     }
     delay(50);
   }
 }
 
 void doGoPos(char *cmd) {
-  // aller_a_position(target_pos.x, target_pos.y);
-  Serial.printf("going to %d;%d\n", target_pos.x, target_pos.y);
-  avancer(-100);
+  aller_a_position(target_pos.x*1000, target_pos.y*1000, 0);
+  Serial.printf("going to %.2f;%.2f\n", target_pos.x, target_pos.y);
 }
 
 // Position is stored in m, but displayed and inputed in cm
@@ -245,37 +252,37 @@ void doSetTargetX(char *cmd) {
   float target_x;
   command.scalar(&target_x, cmd);
   target_pos.x = target_x/100;
-  Serial.printf("Set target X to %dcm\n", target_x);
+  Serial.printf("Set target X to %.1fcm\n", target_x);
 }
 
 void doSetTargetY(char *cmd) {
   float target_y;
   command.scalar(&target_y, cmd);
   target_pos.y = target_y/100;
-  Serial.printf("Set target Y to %dcm\n", target_y);
+  Serial.printf("Set target Y to %.1fcm\n", target_y);
 }
 
 void doSetCurrentX(char *cmd) {
   float current_x;
   command.scalar(&current_x, cmd);
   odometry.current.x = current_x/100;
-  Serial.printf("Set current X to %dcm\n", current_x);
+  Serial.printf("Set current X to %.1fcm\n", current_x);
 }
 
 void doSetCurrentY(char *cmd) {
   float current_y;
   command.scalar(&current_y, cmd);
   odometry.current.y = current_y/100;
-  Serial.printf("Set current Y to %dcm\n", current_y);
+  Serial.printf("Set current Y to %.5fcm\n", current_y);
 }
 
 void doPrintOdoStatus(char *cmd) {
-  Serial.printf("Current X:\t %dcm\n", odometry.current.x*100);
-  Serial.printf("Current Y:\t %dcm\n", odometry.current.y*100);
-  Serial.printf("Current θ:\t %d\n", odometry.current.theta);
+  Serial.printf("Current X:\t %.1fcm\n", odometry.current.x*100);
+  Serial.printf("Current Y:\t %.1fcm\n", odometry.current.y*100);
+  Serial.printf("Current θ:\t %.1f\n", odometry.current.theta);
 
-  Serial.printf("Target X:\t %dcm\n", target_pos.x*100);
-  Serial.printf("Target Y:\t %dcm\n", target_pos.y*100);
+  Serial.printf("Target X:\t %.1fcm\n", target_pos.x*100);
+  Serial.printf("Target Y:\t %.1fcm\n", target_pos.y*100);
 }
 
 void setup() {
