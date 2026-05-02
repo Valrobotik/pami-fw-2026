@@ -93,3 +93,17 @@ void OdoTask(void *pvParams) {
     delay(10);
   }
 }
+
+void MoveTask(void *pvParams){
+  Serial.println("Started move task");
+  while (1) {
+    if (motors_state == motors_state_t::WAITING) {
+      float dx = target_pos.x*1000 - odometry.current.x*1000;
+      float dy = target_pos.y*1000 - odometry.current.y*1000;
+      if (!((abs(dx) < 5 && abs(dy) < 5 ) && abs(target_pos.theta - odometry.current.theta) < 0.001)) {
+        aller_a_position(target_pos.x*1000, target_pos.y*1000, target_pos.theta);
+      }
+    }
+    delay(50);
+  }
+}

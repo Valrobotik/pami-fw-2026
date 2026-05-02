@@ -19,6 +19,7 @@ typedef struct odometry_status_t {
 } odometry_status_t;
 
 extern motors_state_t motors_state;
+extern pose_2d_t target_pos;
 extern Stepper stepper1;
 extern Stepper stepper2;
 extern odometry_status_t odometry;
@@ -33,3 +34,4 @@ float droite(float x, float y);
 float clamp_angle(float theta);
 void aller_a_position(float x, float y, float theta);
 void OdoTask(void *pvParams);
+void MoveTask(void *pvParams);
