@@ -63,7 +63,8 @@ typedef enum motors_state_t {
   TURNING,
   FORWARD,
   WAITING,
-  STOPPING,
+  STOPPING_TURNING,
+  STOPPING_FORWARD,
 } motors_state_t;
 motors_state_t motors_state = motors_state_t::OFF;
 
@@ -160,55 +161,33 @@ float step_to_distance(int s) {
   return (s*DIAMETRE_ROUE*PI)/51200;
 }
 
-int avancer(int d, int theta){ // parametre en millimetre
+void avancer(int d){ // parametre en millimetre
   motors_state = motors_state_t::FORWARD;
-  int32_t start_steps = stepper1.getCurrentPosition();
-  stepper2.move(distance_to_step(d));
-  stepper1.move(-distance_to_step(d));
-  // C'est pas sincère mais bon...
-  int x = odometry_status.current_x;
-  int y = odometry_status.current_y;
-  int32_t d_steps = stepper1.getCurrentPosition();
+  int32_t start_steps = stepper2.getCurrentPosition();
   while (stepper2.isRunning()&& stepper1.isRunning()){
     if (xQueueReceive(stop_queue, NULL, pdMS_TO_TICKS(50)) == pdTRUE) {
       stepper2.stopMove();
       stepper1.stopMove();
+      motors_state = motors_state_t::STOPPING_FORWARD;
       delay(1000); // prsk c'est comme ca
-      float distance_parcourue = step_to_distance(abs(start_steps-stepper1.getCurrentPosition()));
-      motors_state = motors_state_t::WAITING;
-      return distance_parcourue;
     }
-    float distance_parcourue = step_to_distance(abs(d_steps-stepper1.getCurrentPosition()));
-    d_steps = stepper1.getCurrentPosition();
-    odometry_status.current_x += distance_parcourue * cos(theta);
-    odometry_status.current_y+= distance_parcourue * sin(theta);
   }
   motors_state = motors_state_t::WAITING;
-  odometry_status.current_x = x;
-  odometry_status.current_y = y;
-  return d;
 }
 
-int tourner(int rot){ // paramètre en degré, largeur en millimetre 
+void tourner(int rot){ // paramètre en degré, largeur en millimetre 
   motors_state = motors_state_t::TURNING;
-  int32_t start_steps = stepper2.getCurrentPosition();
   stepper2.move(distance_to_step((LARGEUR*PI*rot)/360));
   stepper1.move(-distance_to_step((-LARGEUR*PI*rot)/360));
   while (stepper2.isRunning()&& stepper1.isRunning()){
     if (xQueueReceive(stop_queue, NULL, pdMS_TO_TICKS(50)) == pdTRUE) {
       stepper2.stopMove();
       stepper1.stopMove();
-      motors_state = motors_state_t::STOPPING;
+      motors_state = motors_state_t::STOPPING_TURNING;
       delay(1000); // prsk c'est comme ca
-      float distance_parcourue = -step_to_distance(abs(start_steps-stepper2.getCurrentPosition()));
-      // Serial.printf("distance parcourue: %f\n", distance_parcourue);
-      // Serial.printf("returned: %d\n", int((distance_parcourue * 360)/(LARGEUR*PI)));
-      motors_state = motors_state_t::WAITING;
-      return int((distance_parcourue * 360)/(LARGEUR*PI));
     }
   }
   motors_state = motors_state_t::WAITING;
-  return rot;
 }
 
 int droite (int x, int y ){
@@ -230,27 +209,14 @@ void aller_a_position(int x ,int y) {
   int d_theta = ((theta - odometry_status.current_angle + 180) % 360) - 180;
   int z = droite(dx, dy);
   int bf = odometry_status.current_angle;
-
-  odometry_status.current_angle = (odometry_status.current_angle + tourner(d_theta)) % 360;
-  int distance_parcourue = avancer(z, theta);
-  if (distance_parcourue == z) {
-    odometry_status.current_x += dx;
-    odometry_status.current_y += dy;
-  } else {
-    odometry_status.current_x += distance_parcourue * cos(theta);
-    odometry_status.current_y+= distance_parcourue * sin(theta);
-  }
+  tourner(d_theta);
+  avancer(z);
 
   Serial.printf("dx: %d, dy: %d, dθ: %d\n", dx, dy, d_theta);
   Serial.printf("moving by %d from %d to %d\n", d_theta, bf, odometry_status.current_angle);
   motors_state = motors_state_t::WAITING;
 }
-// A faire : -rajouter une position initiale de réference !
 //- rajouter une procédure en cas d'obstacle pour le contourner ou simplement créer une nouvelle trajectoire non linéaire
-// (a ce propos là refléchir à une trajectoire circulaire en utilisant séparenemen les 2 roues et pas le déplacement central -> permettrait une trajectoire plus souple)
-// emplacement initial avec un pole pour reperer son orientation et des coordonnées 0,0 => à établier avec le terrain de jeu directement
-// Coordonnées des capla à avoir avec le wifi, sinon pas possible de différencier le mur et les capla et donc ce qu'il faudrait contourner dans la trajectoire
-// Donc faire une fonction capla qui connait la coordonées du capla à eviter si il est sur notre droit de trajectoire et decaler notre trajectoire
 
 void MoveTask(void *pvParams){
   Serial.println("Started move task");
