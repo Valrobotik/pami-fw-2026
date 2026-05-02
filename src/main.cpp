@@ -18,6 +18,7 @@
 
 #define DIAMETRE_ROUE 65// en millimètre
 #define LARGEUR 123// en millimètre largeur entre les 2 roues
+#define STEPS_PER_ROT 51200
 #define DISTANCE 100 // en millimetre, distance avant le mur
 #define LONGUEURCAPLA 100 // en millimetre, longueur d'un obstacle
 
@@ -47,16 +48,21 @@ Stepper stepper2 = Stepper(DIR_2_PIN, STEP_2_PIN, SLEEP_2_PIN, VREF_2_PIN, EN_2_
 
 CRGB led[1];
 
-typedef struct odometry_status_t {
-  int current_x = 0;
-  int current_y = 0;
-  int current_angle = 0;
+typedef struct pose_2d_t {
+  float x;
+  float y;
+  float theta;
+} pose_2d_t;
 
-  int target_x = 0;
-  int target_y = 0;
-  int target_angle = 0;
+typedef struct odometry_status_t {
+  pose_2d_t current;
+  int32_t last_stepper_1;
+  int32_t last_stepper_2;
+  unsigned long last_time;
 } odometry_status_t;
-odometry_status_t odometry_status {};
+
+odometry_status_t odometry = {0};
+pose_2d_t target_pos = {0};
 
 typedef enum motors_state_t {
   OFF,
@@ -111,18 +117,18 @@ void LightTask(void *pvParams) {
 }
 
 void ros_update_odometry() {
-  msg_pose.header.stamp.sec = 0;
-  msg_pose.header.stamp.nanosec = 0;
-  rosidl_runtime_c__String__assign(&msg_pose.header.frame_id, "world");
-  msg_pose.pose.position.x = ((double) odometry_status.current_x)/1000;
-  msg_pose.pose.position.y = ((double)odometry_status.current_y)/1000;
-  msg_pose.pose.position.z = 0;
-  msg_pose.pose.orientation.x = 0;
-  msg_pose.pose.orientation.y = 0;
-  double half_theta = (odometry_status.current_angle * PI / 180.0) * 0.5;
-  msg_pose.pose.orientation.z = sin(half_theta);
-  msg_pose.pose.orientation.w = cos(half_theta);
-  RCCHECK(rcl_publish(&publisher_pose, &msg_pose, NULL));
+  // msg_pose.header.stamp.sec = 0;
+  // msg_pose.header.stamp.nanosec = 0;
+  // rosidl_runtime_c__String__assign(&msg_pose.header.frame_id, "world");
+  // msg_pose.pose.position.x = ((double) odometry_status.current_x)/1000;
+  // msg_pose.pose.position.y = ((double)odometry_status.current_y)/1000;
+  // msg_pose.pose.position.z = 0;
+  // msg_pose.pose.orientation.x = 0;
+  // msg_pose.pose.orientation.y = 0;
+  // double half_theta = (odometry_status.current_angle * PI / 180.0) * 0.5;
+  // msg_pose.pose.orientation.z = sin(half_theta);
+  // msg_pose.pose.orientation.w = cos(half_theta);
+  // RCCHECK(rcl_publish(&publisher_pose, &msg_pose, NULL));
 }
 
 void ros_update_obstacle() {
@@ -149,21 +155,18 @@ void bras_noisette(){
   }
 }
 
-int distance_to_step(int d){ //d en millimètre distance à parcourir
-  float var;
-  int pas;
-  var = (d)/ (DIAMETRE_ROUE*PI);
-  pas = var * 51200 ;
-  return pas;
+int distance_to_step(float d) { //d en millimètre distance à parcourir
+  return (d*STEPS_PER_ROT)/(DIAMETRE_ROUE*PI);
 }
 
 float step_to_distance(int s) {
-  return (s*DIAMETRE_ROUE*PI)/51200;
+  return (s*DIAMETRE_ROUE*PI)/STEPS_PER_ROT;
 }
 
 void avancer(int d){ // parametre en millimetre
   motors_state = motors_state_t::FORWARD;
-  int32_t start_steps = stepper2.getCurrentPosition();
+  stepper1.move(-distance_to_step(d));
+  stepper2.move(distance_to_step(d));
   while (stepper2.isRunning()&& stepper1.isRunning()){
     if (xQueueReceive(stop_queue, NULL, pdMS_TO_TICKS(50)) == pdTRUE) {
       stepper2.stopMove();
@@ -175,10 +178,10 @@ void avancer(int d){ // parametre en millimetre
   motors_state = motors_state_t::WAITING;
 }
 
-void tourner(int rot){ // paramètre en degré, largeur en millimetre 
+void tourner(float rot){ // rot en radian [-pi;pi]
   motors_state = motors_state_t::TURNING;
-  stepper2.move(distance_to_step((LARGEUR*PI*rot)/360));
-  stepper1.move(-distance_to_step((-LARGEUR*PI*rot)/360));
+  stepper2.move(distance_to_step(LARGEUR*rot/2));
+  stepper1.move(-distance_to_step(-LARGEUR*rot/2));
   while (stepper2.isRunning()&& stepper1.isRunning()){
     if (xQueueReceive(stop_queue, NULL, pdMS_TO_TICKS(50)) == pdTRUE) {
       stepper2.stopMove();
@@ -197,103 +200,105 @@ int droite (int x, int y ){
 
 // parametre en millimetre , x et y coordonnées que l'ont veut atteindre,
 // theta parametre d'orientation
-void aller_a_position(int x ,int y) {
-  int dx = x - odometry_status.current_x;
-  int dy = y - odometry_status.current_y;
-  if (!dx && !dy) {
-    Serial.println("Pas de mouvements nécessaire");
-    return;
-  }
-  Serial.printf("Moving by x: %d, y:%d\n", dx, dy);
-  int theta = (int(360 - atan2(dy, dx)*(180/PI))) % 360;
-  int d_theta = ((theta - odometry_status.current_angle + 180) % 360) - 180;
-  int z = droite(dx, dy);
-  int bf = odometry_status.current_angle;
-  tourner(d_theta);
-  avancer(z);
+// void aller_a_position(int x ,int y) {
+//   int dx = x - odometry_status.current_x;
+//   int dy = y - odometry_status.current_y;
+//   if (!dx && !dy) {
+//     Serial.println("Pas de mouvements nécessaire");
+//     return;
+//   }
+//   Serial.printf("Moving by x: %d, y:%d\n", dx, dy);
+//   int theta = (int(360 - atan2(dy, dx)*(180/PI))) % 360;
+//   int d_theta = ((theta - odometry_status.current_angle + 180) % 360) - 180;
+//   int z = droite(dx, dy);
+//   int bf = odometry_status.current_angle;
+//   tourner(d_theta);
+//   avancer(z);
 
-  Serial.printf("dx: %d, dy: %d, dθ: %d\n", dx, dy, d_theta);
-  Serial.printf("moving by %d from %d to %d\n", d_theta, bf, odometry_status.current_angle);
-  motors_state = motors_state_t::WAITING;
-}
+//   Serial.printf("dx: %d, dy: %d, dθ: %d\n", dx, dy, d_theta);
+//   Serial.printf("moving by %d from %d to %d\n", d_theta, bf, odometry_status.current_angle);
+//   motors_state = motors_state_t::WAITING;
+// }
 //- rajouter une procédure en cas d'obstacle pour le contourner ou simplement créer une nouvelle trajectoire non linéaire
 
 void MoveTask(void *pvParams){
   Serial.println("Started move task");
   while (1) {
-    if (motors_state == motors_state_t::WAITING &&
-       (odometry_status.current_x != odometry_status.target_x ||
-        odometry_status.current_y != odometry_status.target_y)) {
-          Serial.println("Target not reached, moving again....");
-          aller_a_position(odometry_status.target_x, odometry_status.target_y);
-        }
+    // if (motors_state == motors_state_t::WAITING &&
+    //    (odometry_status.current_x != target_pos.x ||
+    //     odometry_status.current_y != target_pos.y)) {
+    //       Serial.println("Target not reached, moving again....");
+    //       aller_a_position(target_pos.x, target_pos.y);
+    //     }
     delay(50);
   }
 }
 
 void doGoPos(char *cmd) {
-  aller_a_position(odometry_status.target_x, odometry_status.target_y);
-  Serial.printf("going to %d;%d\n", odometry_status.target_x, odometry_status.target_y);
+  // aller_a_position(target_pos.x, target_pos.y);
+  Serial.printf("going to %d;%d\n", target_pos.x, target_pos.y);
+  avancer(-100);
 }
 
+// Position is stored in m, but displayed and inputed in cm
 void doSetTargetX(char *cmd) {
   float target_x;
   command.scalar(&target_x, cmd);
-  odometry_status.target_x = int(round(target_x));
-  Serial.printf("Set target X to %d\n", odometry_status.target_x);
+  target_pos.x = target_x/100;
+  Serial.printf("Set target X to %dcm\n", target_x);
 }
 
 void doSetTargetY(char *cmd) {
   float target_y;
   command.scalar(&target_y, cmd);
-  odometry_status.target_y = int(round(target_y));
-  Serial.printf("Set target Y to %d\n", odometry_status.target_y);
+  target_pos.y = target_y/100;
+  Serial.printf("Set target Y to %dcm\n", target_y);
 }
 
 void doSetCurrentX(char *cmd) {
   float current_x;
   command.scalar(&current_x, cmd);
-  odometry_status.current_x = int(round(current_x));
-  Serial.printf("Set current X to %d\n", odometry_status.current_x);
+  odometry.current.x = current_x/100;
+  Serial.printf("Set current X to %dcm\n", current_x);
 }
 
 void doSetCurrentY(char *cmd) {
   float current_y;
   command.scalar(&current_y, cmd);
-  odometry_status.current_x = int(round(current_y));
-  Serial.printf("Set current X to %d\n", odometry_status.current_y);
+  odometry.current.y = current_y/100;
+  Serial.printf("Set current Y to %dcm\n", current_y);
 }
 
 void doPrintOdoStatus(char *cmd) {
-  Serial.printf("Current X:\t %d\n", odometry_status.current_x);
-  Serial.printf("Current Y:\t %d\n", odometry_status.current_y);
-  Serial.printf("Current θ:\t %d\n", odometry_status.current_angle);
+  Serial.printf("Current X:\t %dcm\n", odometry.current.x*100);
+  Serial.printf("Current Y:\t %dcm\n", odometry.current.y*100);
+  Serial.printf("Current θ:\t %d\n", odometry.current.theta);
 
-  Serial.printf("Target X:\t %d\n", odometry_status.target_x);
-  Serial.printf("Target Y:\t %d\n", odometry_status.target_y);
+  Serial.printf("Target X:\t %dcm\n", target_pos.x*100);
+  Serial.printf("Target Y:\t %dcm\n", target_pos.y*100);
 }
 
 void setup() {
   Serial.begin(115200);
-  Serial.printf("Connecting to ap: %s\n", ENV_WIFI_SSID);
-  IPAddress agent_ip(ENV_AGENT_IP);
-  uint16_t agent_port = 8888;
-  set_microros_wifi_transports(ENV_WIFI_SSID, ENV_WIFI_PASSWORD, agent_ip, agent_port);
-  delay(2000);
-  allocator = rcl_get_default_allocator();
-  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
-  RCCHECK(rclc_node_init_default(&node, "micro_ros_wifi_node", "", &support));
-  RCCHECK(rclc_publisher_init_best_effort(
-    &publisher,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
-    "obstacle"));
-  RCCHECK(rclc_publisher_init_best_effort(
-    &publisher_pose,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
-    "pami/position"));
-  delay(2000);
+  // Serial.printf("Connecting to ap: %s\n", ENV_WIFI_SSID);
+  // IPAddress agent_ip(ENV_AGENT_IP);
+  // uint16_t agent_port = 8888;
+  // set_microros_wifi_transports(ENV_WIFI_SSID, ENV_WIFI_PASSWORD, agent_ip, agent_port);
+  // delay(2000);
+  // allocator = rcl_get_default_allocator();
+  // RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+  // RCCHECK(rclc_node_init_default(&node, "micro_ros_wifi_node", "", &support));
+  // RCCHECK(rclc_publisher_init_best_effort(
+  //   &publisher,
+  //   &node,
+  //   ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+  //   "obstacle"));
+  // RCCHECK(rclc_publisher_init_best_effort(
+  //   &publisher_pose,
+  //   &node,
+  //   ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
+  //   "pami/position"));
+  // delay(2000);
 
   Wire.setPins(14, 13);
   lox.begin(); // TODO: check for init
@@ -306,7 +311,7 @@ void setup() {
   xTaskCreatePinnedToCore(StopTask, "StopTask", 2048, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(MoveTask, "MoveTask", 2048, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(LightTask, "LightTask", 2048, NULL, 2, NULL, 1);
-  xTaskCreatePinnedToCore(RosTask, "RosTask", 4096, NULL, 2, NULL, 1);
+  // xTaskCreatePinnedToCore(RosTask, "RosTask", 4096, NULL, 2, NULL, 1);
 
   // Bras servo init
   if (ledcAttach(SERVO_PIN, 60, 12))
