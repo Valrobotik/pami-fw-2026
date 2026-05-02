@@ -34,9 +34,12 @@ rcl_publisher_t publisher;
 rcl_publisher_t publisher_pose;
 std_msgs__msg__Bool msg;
 geometry_msgs__msg__PoseStamped msg_pose;
+geometry_msgs__msg__PoseStamped received_msg;
 rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
+rcl_subscription_t subscriber;
+rclc_executor_t executor;
 
 Adafruit_VL53L0X lox = Adafruit_VL53L0X();
  
@@ -173,6 +176,7 @@ void RosTask(void *pvParams) {
   while (1) {
     EXECUTE_EVERY_N_MS(100, ros_update_obstacle());
     EXECUTE_EVERY_N_MS(100, ros_update_odometry());
+    rclc_executor_spin_some(&executor, RCL_MS_TO_NS(50));
     delay(20);
   }
 }
@@ -247,6 +251,13 @@ void aller_a_position(float x, float y, float theta) {
   motors_state = motors_state_t::WAITING;
 }
 //- rajouter une procédure en cas d'obstacle pour le contourner ou simplement créer une nouvelle trajectoire non linéaire
+
+void SubscriptionCallback(const void* msgin) {
+  const geometry_msgs__msg__PoseStamped* msg = (const geometry_msgs__msg__PoseStamped*)msgin;
+  Serial.println("Setting target from ROS");
+  target_pos.x = msg->pose.position.x;
+  target_pos.y = msg->pose.position.y;
+}
 
 void MoveTask(void *pvParams){
   Serial.println("Started move task");
@@ -332,6 +343,12 @@ void setup() {
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
     ENV_NAMESPACE"/position"));
+  RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
+  RCCHECK(rclc_subscription_init_default(&subscriber, &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
+     "/goal_pose"));
+  RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &received_msg,
+      &SubscriptionCallback, ON_NEW_DATA));
 
   Wire.setPins(14, 13);
   lox.begin(); // TODO: check for init
