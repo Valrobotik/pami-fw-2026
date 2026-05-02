@@ -139,7 +139,7 @@ void OdoTask(void *pvParams) {
     int32_t d_step_2 = stepper2.getCurrentPosition() - odometry.last_stepper_2;
     odometry.last_stepper_2 = stepper2.getCurrentPosition();
     float distance_moyenne = (step_to_distance(d_step_1) + step_to_distance(d_step_2))/2;
-    float d_theta = (step_to_distance(d_step_2) - step_to_distance(d_step_1))/LARGEUR;
+    float d_theta = (step_to_distance(d_step_1) - step_to_distance(d_step_2))/LARGEUR;
     float new_theta = odometry.current.theta + d_theta;
     odometry.current.theta = new_theta;
     odometry.current.theta = clamp_angle(odometry.current.theta);
@@ -205,8 +205,9 @@ void avancer(int d){ // parametre en millimetre
 
 void tourner(float rot){ // rot en radian [-pi;pi]
   motors_state = motors_state_t::TURNING;
-  stepper2.move(distance_to_step(LARGEUR*rot/2));
-  stepper1.move(-distance_to_step(-LARGEUR*rot/2));
+  int32_t steps = -distance_to_step(LARGEUR*rot/2);
+  stepper2.move(steps);
+  stepper1.move(steps);
   while ((stepper2.isMoving() && stepper1.isMoving())){
     if (obstacle_detected) {
       stepper2.stopMove();
