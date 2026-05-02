@@ -80,6 +80,9 @@ void LightTask(void *pvParams) {
       led[0] = CRGB::Green;
       break;
     }
+    if ((millis() % 5000) < 30) {
+      led[0] = CRGB::White;
+    }
     if (obstacle_detected && (millis() % 500) < 100) {
       led[0] = CRGB::Red3;
     }
@@ -87,7 +90,7 @@ void LightTask(void *pvParams) {
       led[0] = CRGB::Purple;
     }
     FastLED.show();
-    delay(50);
+    delay(20);
   }
 }
 
