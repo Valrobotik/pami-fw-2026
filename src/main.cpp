@@ -150,18 +150,18 @@ void OdoTask(void *pvParams) {
 }
 
 void ros_update_odometry() {
-  // msg_pose.header.stamp.sec = 0;
-  // msg_pose.header.stamp.nanosec = 0;
-  // rosidl_runtime_c__String__assign(&msg_pose.header.frame_id, "world");
-  // msg_pose.pose.position.x = ((double) odometry_status.current_x)/1000;
-  // msg_pose.pose.position.y = ((double)odometry_status.current_y)/1000;
-  // msg_pose.pose.position.z = 0;
-  // msg_pose.pose.orientation.x = 0;
-  // msg_pose.pose.orientation.y = 0;
-  // double half_theta = (odometry_status.current_angle * PI / 180.0) * 0.5;
-  // msg_pose.pose.orientation.z = sin(half_theta);
-  // msg_pose.pose.orientation.w = cos(half_theta);
-  // RCCHECK(rcl_publish(&publisher_pose, &msg_pose, NULL));
+  msg_pose.header.stamp.sec = 0;
+  msg_pose.header.stamp.nanosec = 0;
+  rosidl_runtime_c__String__assign(&msg_pose.header.frame_id, "world");
+  msg_pose.pose.position.x = odometry.current.x;
+  msg_pose.pose.position.y = odometry.current.y;
+  msg_pose.pose.position.z = 0;
+  msg_pose.pose.orientation.x = 0;
+  msg_pose.pose.orientation.y = 0;
+  double half_theta = (odometry.current.theta) * 0.5;
+  msg_pose.pose.orientation.z = sin(half_theta);
+  msg_pose.pose.orientation.w = cos(half_theta);
+  RCCHECK(rcl_publish(&publisher_pose, &msg_pose, NULL));
 }
 
 void ros_update_obstacle() {
@@ -314,25 +314,25 @@ void doPrintOdoStatus(char *cmd) {
 
 void setup() {
   Serial.begin(115200);
-  // Serial.printf("Connecting to ap: %s\n", ENV_WIFI_SSID);
-  // IPAddress agent_ip(ENV_AGENT_IP);
-  // uint16_t agent_port = 8888;
-  // set_microros_wifi_transports(ENV_WIFI_SSID, ENV_WIFI_PASSWORD, agent_ip, agent_port);
-  // delay(2000);
-  // allocator = rcl_get_default_allocator();
-  // RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
-  // RCCHECK(rclc_node_init_default(&node, "micro_ros_wifi_node", "", &support));
-  // RCCHECK(rclc_publisher_init_best_effort(
-  //   &publisher,
-  //   &node,
-  //   ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
-  //   "obstacle"));
-  // RCCHECK(rclc_publisher_init_best_effort(
-  //   &publisher_pose,
-  //   &node,
-  //   ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
-  //   "pami/position"));
-  // delay(2000);
+  Serial.printf("Connecting to ap: %s\n", ENV_WIFI_SSID);
+  IPAddress agent_ip(ENV_AGENT_IP);
+  uint16_t agent_port = 8888;
+  set_microros_wifi_transports(ENV_WIFI_SSID, ENV_WIFI_PASSWORD, agent_ip, agent_port);
+  delay(2000);
+  allocator = rcl_get_default_allocator();
+  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+  RCCHECK(rclc_node_init_default(&node, "micro_ros_wifi_node", "", &support));
+  RCCHECK(rclc_publisher_init_best_effort(
+    &publisher,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+    "obstacle"));
+  RCCHECK(rclc_publisher_init_best_effort(
+    &publisher_pose,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
+    "pami/position"));
+  delay(2000);
 
   Wire.setPins(14, 13);
   lox.begin(); // TODO: check for init
@@ -344,7 +344,7 @@ void setup() {
   xTaskCreatePinnedToCore(StopTask, "StopTask", 2048, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(MoveTask, "MoveTask", 4096, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(LightTask, "LightTask", 2048, NULL, 2, NULL, 1);
-  // xTaskCreatePinnedToCore(RosTask, "RosTask", 4096, NULL, 2, NULL, 1);
+  xTaskCreatePinnedToCore(RosTask, "RosTask", 4096, NULL, 2, NULL, 1);
 
   // Bras servo init
   if (ledcAttach(SERVO_PIN, 60, 12))
