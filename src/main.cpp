@@ -255,6 +255,7 @@ void aller_a_position(float x, float y, float theta) {
 void SubscriptionCallback(const void* msgin) {
   const geometry_msgs__msg__PoseStamped* msg = (const geometry_msgs__msg__PoseStamped*)msgin;
   Serial.println("Setting target from ROS");
+  target_pos.theta = 2 * atan2(msg->pose.orientation.z, msg->pose.orientation.w);
   target_pos.x = msg->pose.position.x;
   target_pos.y = msg->pose.position.y;
 }
