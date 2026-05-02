@@ -38,6 +38,16 @@ bool Stepper::isRunning() const
     return m_stepper->isRunning();
 }
 
+bool Stepper::isStopping() const
+{
+    return m_stepper->isStopping();
+}
+
+bool Stepper::isMoving() const
+{
+    return isRunning() || isStopping();
+}
+
 void Stepper::stopMove() {
     return m_stepper->stopMove();
 }

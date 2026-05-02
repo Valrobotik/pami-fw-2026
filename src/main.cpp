@@ -192,12 +192,11 @@ void avancer(int d){ // parametre en millimetre
   motors_state = motors_state_t::FORWARD;
   stepper1.move(-distance_to_step(d));
   stepper2.move(distance_to_step(d));
-  while (stepper2.isRunning()&& stepper1.isRunning()){
+  while ((stepper2.isMoving() && stepper1.isMoving())){
     if (obstacle_detected) {
       stepper2.stopMove();
       stepper1.stopMove();
       motors_state = motors_state_t::STOPPING_FORWARD;
-      delay(1000); // prsk c'est comme ca
     }
     delay(50);
   }
@@ -208,12 +207,11 @@ void tourner(float rot){ // rot en radian [-pi;pi]
   motors_state = motors_state_t::TURNING;
   stepper2.move(distance_to_step(LARGEUR*rot/2));
   stepper1.move(-distance_to_step(-LARGEUR*rot/2));
-  while (stepper2.isRunning()&& stepper1.isRunning()){
+  while ((stepper2.isMoving() && stepper1.isMoving())){
     if (obstacle_detected) {
       stepper2.stopMove();
       stepper1.stopMove();
       motors_state = motors_state_t::STOPPING_TURNING;
-      delay(1000); // prsk c'est comme ca
     }
     delay(50);
   }

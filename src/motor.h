@@ -8,6 +8,8 @@ public:
     void init();
     MoveResultCode move(int32_t move, bool blocking = false);
     bool isRunning() const;
+    bool isStopping() const;
+    bool isMoving() const;
     void stopMove();
     int32_t getCurrentPosition() const;
     bool disableOutputs();
