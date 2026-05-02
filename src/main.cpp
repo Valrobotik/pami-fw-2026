@@ -27,6 +27,10 @@ pose_2d_t target_pos = {0};
 
 motors_state_t motors_state = motors_state_t::OFF;
 
+extern states state;
+
+bool noisette = false;
+
 bool obstacle_detected = false;
 void StopTask(void *pvParams) {
   Serial.println("Started stop task");
@@ -78,6 +82,9 @@ void LightTask(void *pvParams) {
     }
     if (obstacle_detected && (millis() % 500) < 100) {
       led[0] = CRGB::Red3;
+    }
+    if (state != states::AGENT_CONNECTED && (millis() % 500) < 200 && (millis() % 500) > 100) {
+      led[0] = CRGB::Purple;
     }
     FastLED.show();
     delay(50);
@@ -137,6 +144,7 @@ void doPrintOdoStatus(char *cmd) {
 
 void setup() {
   Serial.begin(115200);
+  xTaskCreatePinnedToCore(LightTask, "LightTask", 2048, NULL, 2, NULL, 1);
   init_ros();
   Wire.setPins(14, 13);
   lox.begin(); // TODO: check for init
@@ -147,7 +155,6 @@ void setup() {
 
   xTaskCreatePinnedToCore(StopTask, "StopTask", 2048, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(MoveTask, "MoveTask", 4096, NULL, 2, NULL, 1);
-  xTaskCreatePinnedToCore(LightTask, "LightTask", 2048, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(NoisetteTask, "NoisetteTask", 1024, NULL, 2, NULL, 1);
 
   // Bras servo init

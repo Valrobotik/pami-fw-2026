@@ -1,11 +1,6 @@
 #include "ros.h"
 
-enum states {
-  WAITING_AGENT,
-  AGENT_AVAILABLE,
-  AGENT_CONNECTED,
-  AGENT_DISCONNECTED
-} state;
+states state;
 
 rcl_publisher_t publisher;
 rcl_publisher_t publisher_pose;
@@ -27,7 +22,7 @@ void init_ros() {
   IPAddress agent_ip(ENV_AGENT_IP);
   uint16_t agent_port = 8888;
   set_microros_wifi_transports(ENV_WIFI_SSID, ENV_WIFI_PASSWORD, agent_ip, agent_port);
-  state = WAITING_AGENT;
+  state = states::WAITING_AGENT;
 }
 
 bool ros_update_odometry() {
@@ -116,31 +111,31 @@ void destroy_entities() {
 
 void ros_loop() {
   switch (state) {
-  case WAITING_AGENT:
+  case states::WAITING_AGENT:
     EXECUTE_EVERY_N_MS(500, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1))
-                                        ? AGENT_AVAILABLE
-                                        : WAITING_AGENT;);
+                                        ? states::AGENT_AVAILABLE
+                                        : states::WAITING_AGENT;);
     break;
-  case AGENT_AVAILABLE:
-    state = (true == create_entities()) ? AGENT_CONNECTED : WAITING_AGENT;
-    if (state == WAITING_AGENT) {
+  case states::AGENT_AVAILABLE:
+    state = (true == create_entities()) ? states::AGENT_CONNECTED : states::WAITING_AGENT;
+    if (state == states::WAITING_AGENT) {
       destroy_entities();
     };
     break;
-  case AGENT_CONNECTED:
+  case states::AGENT_CONNECTED:
     EXECUTE_EVERY_N_MS(200, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1))
-                                        ? AGENT_CONNECTED
-                                        : AGENT_DISCONNECTED;);
-    if (state == AGENT_CONNECTED) {
+                                        ? states::AGENT_CONNECTED
+                                        : states::AGENT_DISCONNECTED;);
+    if (state == states::AGENT_CONNECTED) {
         EXECUTE_EVERY_N_MS(100, ros_update_obstacle());
         EXECUTE_EVERY_N_MS(100, ros_update_odometry());
         EXECUTE_EVERY_N_MS(1000, ros_update_batt());
         rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
     }
     break;
-  case AGENT_DISCONNECTED:
+  case states::AGENT_DISCONNECTED:
     destroy_entities();
-    state = WAITING_AGENT;
+    state = states::WAITING_AGENT;
     break;
   default:
     break;

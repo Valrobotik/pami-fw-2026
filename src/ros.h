@@ -20,6 +20,13 @@
   if (uxr_millis() - init > MS) { X; init = uxr_millis();} \
 } while (0) \
 
+enum class states {
+  WAITING_AGENT,
+  AGENT_AVAILABLE,
+  AGENT_CONNECTED,
+  AGENT_DISCONNECTED
+};
+
 extern bool obstacle_detected;
 extern odometry_status_t odometry;
 extern pose_2d_t target_pos;
