@@ -1,6 +1,14 @@
 #pragma once
 #include <FastAccelStepper.h>
 
+typedef enum motors_state_t {
+  OFF,
+  TURNING,
+  FORWARD,
+  WAITING,
+  STOPPING_TURNING,
+  STOPPING_FORWARD,
+} motors_state_t;
 
 class Stepper {
 public:

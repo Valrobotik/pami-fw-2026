@@ -15,12 +15,9 @@
 
 #include "pin_definitions.h"
 #include "motor.h"
+#include "kinematics.h"
 
-#define DIAMETRE_ROUE 65// en millimètre
-#define LARGEUR 123// en millimètre largeur entre les 2 roues
-#define STEPS_PER_ROT 51200
 #define DISTANCE 100 // en millimetre, distance avant le mur
-#define LONGUEURCAPLA 100 // en millimetre, longueur d'un obstacle
 
 // ROS
 #define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){Serial.println("Erreur ROS");}}
@@ -51,30 +48,9 @@ Stepper stepper2 = Stepper(DIR_2_PIN, STEP_2_PIN, SLEEP_2_PIN, VREF_2_PIN, EN_2_
 
 CRGB led[1];
 
-typedef struct pose_2d_t {
-  float x;
-  float y;
-  float theta;
-} pose_2d_t;
-
-typedef struct odometry_status_t {
-  pose_2d_t current;
-  int32_t last_stepper_1;
-  int32_t last_stepper_2;
-  unsigned long last_time;
-} odometry_status_t;
-
 odometry_status_t odometry = {0};
 pose_2d_t target_pos = {0};
 
-typedef enum motors_state_t {
-  OFF,
-  TURNING,
-  FORWARD,
-  WAITING,
-  STOPPING_TURNING,
-  STOPPING_FORWARD,
-} motors_state_t;
 motors_state_t motors_state = motors_state_t::OFF;
 
 bool obstacle_detected = false;
@@ -114,41 +90,6 @@ void LightTask(void *pvParams) {
     }
     FastLED.show();
     delay(50);
-  }
-}
-
-// exprime theta entre -pi et pi
-float clamp_angle(float theta) {
-  if (theta > PI) {
-    theta -= (2 * PI);
-  } if (theta < -PI) {
-    theta += (2 * PI);
-  }
-  return theta;
-}
-
-int distance_to_step(float d) { //d en millimètre distance à parcourir
-  return (d*STEPS_PER_ROT)/(DIAMETRE_ROUE*PI);
-}
-
-float step_to_distance(int s) {
-  return (s*DIAMETRE_ROUE*PI)/STEPS_PER_ROT;
-}
-
-void OdoTask(void *pvParams) {
-  while (1) {
-    int32_t d_step_1 = -(stepper1.getCurrentPosition() - odometry.last_stepper_1);
-    odometry.last_stepper_1 = stepper1.getCurrentPosition();
-    int32_t d_step_2 = stepper2.getCurrentPosition() - odometry.last_stepper_2;
-    odometry.last_stepper_2 = stepper2.getCurrentPosition();
-    float distance_moyenne = (step_to_distance(d_step_1) + step_to_distance(d_step_2))/2;
-    float d_theta = (step_to_distance(d_step_1) - step_to_distance(d_step_2))/LARGEUR;
-    float new_theta = odometry.current.theta + d_theta;
-    odometry.current.theta = new_theta;
-    odometry.current.theta = clamp_angle(odometry.current.theta);
-    odometry.current.x += distance_moyenne*cos(new_theta)/1000;
-    odometry.current.y += distance_moyenne*sin(new_theta)/1000;
-    delay(10);
   }
 }
 
@@ -192,65 +133,6 @@ void bras_noisette(){
   }
 }
 
-void avancer(int d){ // parametre en millimetre
-  motors_state = motors_state_t::FORWARD;
-  stepper1.move(-distance_to_step(d));
-  stepper2.move(distance_to_step(d));
-  while ((stepper2.isMoving() && stepper1.isMoving())){
-    if (obstacle_detected) {
-      stepper2.stopMove();
-      stepper1.stopMove();
-      motors_state = motors_state_t::STOPPING_FORWARD;
-    }
-    delay(50);
-  }
-  motors_state = motors_state_t::WAITING;
-}
-
-void tourner(float rot){ // rot en radian [-pi;pi]
-  motors_state = motors_state_t::TURNING;
-  int32_t steps = -distance_to_step(LARGEUR*rot/2);
-  stepper2.move(steps);
-  stepper1.move(steps);
-  while ((stepper2.isMoving() && stepper1.isMoving())){
-    if (obstacle_detected) {
-      stepper2.stopMove();
-      stepper1.stopMove();
-      motors_state = motors_state_t::STOPPING_TURNING;
-    }
-    delay(50);
-  }
-  motors_state = motors_state_t::WAITING;
-}
-
-float droite (float x, float y ){
-  float z = sqrt(pow(x,2) + pow(y,2));
-  return z;
-}
-
-// parametre en millimetre , x et y coordonnées que l'ont veut atteindre,
-// theta parametre d'orientation en radian
-void aller_a_position(float x, float y, float theta) {
-  float dx = x - odometry.current.x*1000;
-  float dy = y - odometry.current.y*1000;
-  if ((abs(dx) < 5 && abs(dy) < 5 ) && abs(theta - odometry.current.theta) < 0.001) {
-    Serial.println("Pas de mouvements nécessaire");
-    return;
-  }
-  Serial.printf("Moving by x: %.2f, y:%.2f\n", dx, dy);
-  float move_theta = atan2(dy, dx);
-  float d_move_theta = move_theta - odometry.current.theta;
-  float d = droite(dx, dy);
-  if (abs(dx) > 5 || abs(dy) > 5 ) {
-    tourner(d_move_theta);
-    avancer(d);
-  }
-  tourner(-clamp_angle(odometry.current.theta - theta));
-
-  Serial.printf("dx: %.2f, dy: %.2f, dθ: %.2f\n", dx, dy, d_move_theta);
-  motors_state = motors_state_t::WAITING;
-}
-//- rajouter une procédure en cas d'obstacle pour le contourner ou simplement créer une nouvelle trajectoire non linéaire
 
 void SubscriptionCallback(const void* msgin) {
   const geometry_msgs__msg__PoseStamped* msg = (const geometry_msgs__msg__PoseStamped*)msgin;
