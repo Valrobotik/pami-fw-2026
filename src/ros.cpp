@@ -59,7 +59,7 @@ bool ros_update_batt() {
 bool create_entities() {
   allocator = rcl_get_default_allocator();
   RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
-  RCCHECK(rclc_node_init_default(&node, "micro_ros_wifi_node", "", &support));
+  RCCHECK(rclc_node_init_default(&node, ENV_NAMESPACE, "", &support));
 
   RCCHECK(rclc_publisher_init_best_effort(
     &publisher,
