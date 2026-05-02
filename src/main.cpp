@@ -318,7 +318,6 @@ void setup() {
   IPAddress agent_ip(ENV_AGENT_IP);
   uint16_t agent_port = 8888;
   set_microros_wifi_transports(ENV_WIFI_SSID, ENV_WIFI_PASSWORD, agent_ip, agent_port);
-  delay(2000);
   allocator = rcl_get_default_allocator();
   RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
   RCCHECK(rclc_node_init_default(&node, "micro_ros_wifi_node", "", &support));
@@ -326,13 +325,12 @@ void setup() {
     &publisher,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
-    "obstacle"));
+    ENV_NAMESPACE"/obstacle"));
   RCCHECK(rclc_publisher_init_best_effort(
     &publisher_pose,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
-    "pami/position"));
-  delay(2000);
+    ENV_NAMESPACE"/position"));
 
   Wire.setPins(14, 13);
   lox.begin(); // TODO: check for init
