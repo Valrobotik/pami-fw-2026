@@ -74,7 +74,6 @@ typedef enum motors_state_t {
 } motors_state_t;
 motors_state_t motors_state = motors_state_t::OFF;
 
-QueueHandle_t stop_queue;
 bool obstacle_detected = false;
 void StopTask(void *pvParams) {
   Serial.println("Started stop task");
@@ -83,7 +82,6 @@ void StopTask(void *pvParams) {
     lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
     if (measure.RangeMilliMeter < DISTANCE) {
       obstacle_detected = true;
-      xQueueSend(stop_queue, NULL, 0); // TODO: change
     } else {
       obstacle_detected = false;
     }
@@ -195,12 +193,13 @@ void avancer(int d){ // parametre en millimetre
   stepper1.move(-distance_to_step(d));
   stepper2.move(distance_to_step(d));
   while (stepper2.isRunning()&& stepper1.isRunning()){
-    if (xQueueReceive(stop_queue, NULL, pdMS_TO_TICKS(50)) == pdTRUE) {
+    if (obstacle_detected) {
       stepper2.stopMove();
       stepper1.stopMove();
       motors_state = motors_state_t::STOPPING_FORWARD;
       delay(1000); // prsk c'est comme ca
     }
+    delay(50);
   }
   motors_state = motors_state_t::WAITING;
 }
@@ -210,12 +209,13 @@ void tourner(float rot){ // rot en radian [-pi;pi]
   stepper2.move(distance_to_step(LARGEUR*rot/2));
   stepper1.move(-distance_to_step(-LARGEUR*rot/2));
   while (stepper2.isRunning()&& stepper1.isRunning()){
-    if (xQueueReceive(stop_queue, NULL, pdMS_TO_TICKS(50)) == pdTRUE) {
+    if (obstacle_detected) {
       stepper2.stopMove();
       stepper1.stopMove();
       motors_state = motors_state_t::STOPPING_TURNING;
       delay(1000); // prsk c'est comme ca
     }
+    delay(50);
   }
   motors_state = motors_state_t::WAITING;
 }
@@ -343,7 +343,6 @@ void setup() {
 
   FastLED.addLeds<WS2812B, RGB_PIN, GRB>(led, 1);
 
-  stop_queue = xQueueCreate(1, 0);
   xTaskCreatePinnedToCore(StopTask, "StopTask", 2048, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(MoveTask, "MoveTask", 4096, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(LightTask, "LightTask", 2048, NULL, 2, NULL, 1);
