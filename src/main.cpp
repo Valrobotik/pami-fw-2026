@@ -252,12 +252,13 @@ void aller_a_position(float x, float y, float theta) {
 void MoveTask(void *pvParams){
   Serial.println("Started move task");
   while (1) {
-    // if (motors_state == motors_state_t::WAITING &&
-    //    (odometry_status.current_x != target_pos.x ||
-    //     odometry_status.current_y != target_pos.y)) {
-    //       Serial.println("Target not reached, moving again....");
-    //       aller_a_position(target_pos.x*1000, target_pos.y*1000);
-    //     }
+    if (motors_state == motors_state_t::WAITING) {
+      float dx = target_pos.x*1000 - odometry.current.x*1000;
+      float dy = target_pos.y*1000 - odometry.current.y*1000;
+      if (!((abs(dx) < 5 && abs(dy) < 5 ) && abs(target_pos.theta - odometry.current.theta) < 0.001)) {
+        aller_a_position(target_pos.x*1000, target_pos.y*1000, target_pos.theta);
+      }
+    }
     delay(50);
   }
 }
@@ -344,7 +345,7 @@ void setup() {
 
   stop_queue = xQueueCreate(1, 0);
   xTaskCreatePinnedToCore(StopTask, "StopTask", 2048, NULL, 2, NULL, 1);
-  xTaskCreatePinnedToCore(MoveTask, "MoveTask", 2048, NULL, 2, NULL, 1);
+  xTaskCreatePinnedToCore(MoveTask, "MoveTask", 4096, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(LightTask, "LightTask", 2048, NULL, 2, NULL, 1);
   // xTaskCreatePinnedToCore(RosTask, "RosTask", 4096, NULL, 2, NULL, 1);
 
