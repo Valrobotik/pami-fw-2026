@@ -14,10 +14,12 @@ std_msgs__msg__Bool msg;
 std_msgs__msg__Float32 msg_batt;
 geometry_msgs__msg__PoseStamped msg_pose;
 geometry_msgs__msg__PoseStamped received_msg;
+std_msgs__msg__Bool received_msg_noisette;
 rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
 rcl_subscription_t subscriber;
+rcl_subscription_t subscriber_noisette;
 rclc_executor_t executor;
 
 void init_ros() {
@@ -56,6 +58,11 @@ bool ros_update_batt() {
   return true;
 }
 
+void NoisetteCallback(const void* msgin) {
+  const std_msgs__msg__Bool* msg = (const std_msgs__msg__Bool*)msgin;
+  noisette = msg->data;
+}
+
 bool create_entities() {
   allocator = rcl_get_default_allocator();
   RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
@@ -77,13 +84,18 @@ bool create_entities() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
     ENV_NAMESPACE"/batt"));
 
-  RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
+  RCCHECK(rclc_executor_init(&executor, &support.context, 2, &allocator));
   RCCHECK(rclc_subscription_init_default(&subscriber, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
-     "/goal_pose"));
+    "/goal_pose"));
+  RCCHECK(rclc_subscription_init_default(&subscriber_noisette, &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+    ENV_NAMESPACE"/noisette"));
 
   RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &received_msg,
       &SubscriptionCallback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &subscriber_noisette, &received_msg_noisette,
+      &NoisetteCallback, ON_NEW_DATA));
 
   return true;
 }
@@ -97,6 +109,7 @@ void destroy_entities() {
   (void) rcl_publisher_fini(&publisher_batt, &node);
   (void) rclc_executor_fini(&executor);
   (void) rcl_subscription_fini(&subscriber, &node);
+  (void) rcl_subscription_fini(&subscriber_noisette, &node);
   (void) rcl_node_fini(&node);
   rclc_support_fini(&support);
 }

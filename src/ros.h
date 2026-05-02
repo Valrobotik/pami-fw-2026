@@ -23,6 +23,7 @@
 extern bool obstacle_detected;
 extern odometry_status_t odometry;
 extern pose_2d_t target_pos;
+extern bool noisette;
 
 void init_ros();
 void RosTask(void *pvParams);

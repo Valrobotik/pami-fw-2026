@@ -42,6 +42,23 @@ void StopTask(void *pvParams) {
   }
 }
 
+void NoisetteTask(void *pvParams) {
+  Serial.println("Started noisette task");
+  while (1) {
+    if (noisette) {
+      for (int pos = 0; pos < 256; pos++) {  // go from 0-180 degrees
+        ledcWrite(SERVO_PIN, pos);
+        delay(10);
+      }
+      for (int pos = 255; pos >= 0; pos--) {  // go from 180-0 degrees
+        ledcWrite(SERVO_PIN, pos);
+        delay(10);
+      }
+    }
+    delay(100);
+  }
+}
+
 void LightTask(void *pvParams) {
   Serial.println("Started light task");
   while (1) {
@@ -64,18 +81,6 @@ void LightTask(void *pvParams) {
     }
     FastLED.show();
     delay(50);
-  }
-}
-
-
-void bras_noisette(){
-  for (int pos = 0; pos < 256; pos++) {  // go from 0-180 degrees
-    ledcWrite(BUZZER_PIN, pos);
-    delay(10);
-  }
-  for (int pos = 255; pos >= 0; pos--) {  // go from 180-0 degrees
-    ledcWrite(BUZZER_PIN, pos);
-    delay(10);
   }
 }
 
@@ -143,6 +148,7 @@ void setup() {
   xTaskCreatePinnedToCore(StopTask, "StopTask", 2048, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(MoveTask, "MoveTask", 4096, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(LightTask, "LightTask", 2048, NULL, 2, NULL, 1);
+  xTaskCreatePinnedToCore(NoisetteTask, "NoisetteTask", 1024, NULL, 2, NULL, 1);
 
   // Bras servo init
   if (ledcAttach(SERVO_PIN, 60, 12))
