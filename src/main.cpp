@@ -116,6 +116,41 @@ void LightTask(void *pvParams) {
   }
 }
 
+// exprime theta entre -pi et pi
+float clamp_angle(float theta) {
+  if (theta > PI) {
+    theta -= (2 * PI);
+  } if (theta < -PI) {
+    theta += (2 * PI);
+  }
+  return theta;
+}
+
+int distance_to_step(float d) { //d en millimètre distance à parcourir
+  return (d*STEPS_PER_ROT)/(DIAMETRE_ROUE*PI);
+}
+
+float step_to_distance(int s) {
+  return (s*DIAMETRE_ROUE*PI)/STEPS_PER_ROT;
+}
+
+void OdoTask(void *pvParams) {
+  while (1) {
+    int32_t d_step_1 = -(stepper1.getCurrentPosition() - odometry.last_stepper_1);
+    odometry.last_stepper_1 = stepper1.getCurrentPosition();
+    int32_t d_step_2 = stepper2.getCurrentPosition() - odometry.last_stepper_2;
+    odometry.last_stepper_2 = stepper2.getCurrentPosition();
+    float distance_moyenne = (step_to_distance(d_step_1) + step_to_distance(d_step_2))/2;
+    float d_theta = (step_to_distance(d_step_2) - step_to_distance(d_step_1))/LARGEUR;
+    float new_theta = odometry.current.theta + d_theta;
+    odometry.current.theta = new_theta;
+    odometry.current.theta = clamp_angle(odometry.current.theta);
+    odometry.current.x += distance_moyenne*cos(new_theta)/1000;
+    odometry.current.y += distance_moyenne*sin(new_theta)/1000;
+    delay(10);
+  }
+}
+
 void ros_update_odometry() {
   // msg_pose.header.stamp.sec = 0;
   // msg_pose.header.stamp.nanosec = 0;
@@ -155,14 +190,6 @@ void bras_noisette(){
   }
 }
 
-int distance_to_step(float d) { //d en millimètre distance à parcourir
-  return (d*STEPS_PER_ROT)/(DIAMETRE_ROUE*PI);
-}
-
-float step_to_distance(int s) {
-  return (s*DIAMETRE_ROUE*PI)/STEPS_PER_ROT;
-}
-
 void avancer(int d){ // parametre en millimetre
   motors_state = motors_state_t::FORWARD;
   stepper1.move(-distance_to_step(d));
@@ -198,33 +225,24 @@ float droite (float x, float y ){
   return z;
 }
 
-// exprime theta entre -pi et pi
-float clamp_angle(float theta) {
-  if (theta > PI) {
-    theta -= (2 * PI);
-  } if (theta < -PI) {
-    theta += (2 * PI);
-  }
-  return theta;
-}
-
 // parametre en millimetre , x et y coordonnées que l'ont veut atteindre,
 // theta parametre d'orientation en radian
 void aller_a_position(float x, float y, float theta) {
   float dx = x - odometry.current.x*1000;
   float dy = y - odometry.current.y*1000;
-  if (!dx && !dy) {
+  if ((abs(dx) < 5 && abs(dy) < 5 ) && abs(theta - odometry.current.theta) < 0.001) {
     Serial.println("Pas de mouvements nécessaire");
     return;
   }
   Serial.printf("Moving by x: %.2f, y:%.2f\n", dx, dy);
   float move_theta = atan2(dy, dx);
-  float d_move_theta = move_theta + odometry.current.theta;
-  // clamp_angle(&d_move_theta);
+  float d_move_theta = move_theta - odometry.current.theta;
   float d = droite(dx, dy);
-  tourner(d_move_theta);
-  avancer(d);
-  tourner(-clamp_angle(odometry.current.theta + theta));
+  if (abs(dx) > 5 || abs(dy) > 5 ) {
+    tourner(d_move_theta);
+    avancer(d);
+  }
+  tourner(-clamp_angle(odometry.current.theta - theta));
 
   Serial.printf("dx: %.2f, dy: %.2f, dθ: %.2f\n", dx, dy, d_move_theta);
   motors_state = motors_state_t::WAITING;
@@ -245,7 +263,7 @@ void MoveTask(void *pvParams){
 }
 
 void doGoPos(char *cmd) {
-  aller_a_position(target_pos.x*1000, target_pos.y*1000, 0);
+  aller_a_position(target_pos.x*1000, target_pos.y*1000, target_pos.theta);
   Serial.printf("going to %.2f;%.2f\n", target_pos.x, target_pos.y);
 }
 
@@ -255,6 +273,13 @@ void doSetTargetX(char *cmd) {
   command.scalar(&target_x, cmd);
   target_pos.x = target_x/100;
   Serial.printf("Set target X to %.1fcm\n", target_x);
+}
+
+void doSetTargetT(char *cmd) {
+  float target_theta;
+  command.scalar(&target_theta, cmd);
+  target_pos.theta = target_theta*PI/180;
+  Serial.printf("Set target θ to %.1f°\n", target_theta);
 }
 
 void doSetTargetY(char *cmd) {
@@ -281,10 +306,11 @@ void doSetCurrentY(char *cmd) {
 void doPrintOdoStatus(char *cmd) {
   Serial.printf("Current X:\t %.1fcm\n", odometry.current.x*100);
   Serial.printf("Current Y:\t %.1fcm\n", odometry.current.y*100);
-  Serial.printf("Current θ:\t %.1f\n", odometry.current.theta);
+  Serial.printf("Current θ:\t %.1f°\n", odometry.current.theta*180/PI);
 
   Serial.printf("Target X:\t %.1fcm\n", target_pos.x*100);
   Serial.printf("Target Y:\t %.1fcm\n", target_pos.y*100);
+  Serial.printf("Target θ:\t %.1f°\n", target_pos.theta*180/PI);
 }
 
 void setup() {
@@ -330,6 +356,7 @@ void setup() {
   stepper1.init();
   stepper2.init();
   motors_state = motors_state_t::WAITING;
+  xTaskCreatePinnedToCore(OdoTask, "OdoTask", 2048, NULL, 2, NULL, 1);
 
   // Commander
   command.verbose = VerboseMode::user_friendly;
@@ -337,6 +364,7 @@ void setup() {
   command.add('G', doGoPos);
   command.add('X', doSetTargetX);
   command.add('Y', doSetTargetY);
+  command.add('T', doSetTargetT);
   command.add('i', doSetCurrentX);
   command.add('j', doSetCurrentY);
   command.add('P', doPrintOdoStatus);
