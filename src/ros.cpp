@@ -1,5 +1,12 @@
 #include "ros.h"
 
+enum states {
+  WAITING_AGENT,
+  AGENT_AVAILABLE,
+  AGENT_CONNECTED,
+  AGENT_DISCONNECTED
+} state;
+
 rcl_publisher_t publisher;
 rcl_publisher_t publisher_pose;
 std_msgs__msg__Bool msg;
@@ -16,28 +23,10 @@ void init_ros() {
   IPAddress agent_ip(ENV_AGENT_IP);
   uint16_t agent_port = 8888;
   set_microros_wifi_transports(ENV_WIFI_SSID, ENV_WIFI_PASSWORD, agent_ip, agent_port);
-  allocator = rcl_get_default_allocator();
-  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
-  RCCHECK(rclc_node_init_default(&node, "micro_ros_wifi_node", "", &support));
-  RCCHECK(rclc_publisher_init_best_effort(
-    &publisher,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
-    ENV_NAMESPACE"/obstacle"));
-  RCCHECK(rclc_publisher_init_best_effort(
-    &publisher_pose,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
-    ENV_NAMESPACE"/position"));
-  RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
-  RCCHECK(rclc_subscription_init_default(&subscriber, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
-     "/goal_pose"));
-  RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &received_msg,
-      &SubscriptionCallback, ON_NEW_DATA));
+  state = WAITING_AGENT;
 }
 
-void ros_update_odometry() {
+bool ros_update_odometry() {
   msg_pose.header.stamp.sec = 0;
   msg_pose.header.stamp.nanosec = 0;
   rosidl_runtime_c__String__assign(&msg_pose.header.frame_id, "world");
@@ -50,19 +39,87 @@ void ros_update_odometry() {
   msg_pose.pose.orientation.z = sin(half_theta);
   msg_pose.pose.orientation.w = cos(half_theta);
   RCCHECK(rcl_publish(&publisher_pose, &msg_pose, NULL));
+  return true;
 }
 
-void ros_update_obstacle() {
+bool ros_update_obstacle() {
   msg.data = obstacle_detected;
   RCCHECK(rcl_publish(&publisher, &msg, NULL));
+  return true;
 }
 
 void RosTask(void *pvParams) {
   while (1) {
-    EXECUTE_EVERY_N_MS(100, ros_update_obstacle());
-    EXECUTE_EVERY_N_MS(100, ros_update_odometry());
-    rclc_executor_spin_some(&executor, RCL_MS_TO_NS(50));
+    if (state == AGENT_CONNECTED) {
+      EXECUTE_EVERY_N_MS(100, ros_update_obstacle());
+      EXECUTE_EVERY_N_MS(100, ros_update_odometry());
+      rclc_executor_spin_some(&executor, RCL_MS_TO_NS(50));
+    }
     delay(20);
+  }
+}
+
+bool create_entities() {
+  allocator = rcl_get_default_allocator();
+  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+  RCCHECK(rclc_node_init_default(&node, "micro_ros_wifi_node", "", &support));
+
+  RCCHECK(rclc_publisher_init_best_effort(
+    &publisher,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+    ENV_NAMESPACE"/obstacle"));
+  RCCHECK(rclc_publisher_init_best_effort(
+    &publisher_pose,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
+    ENV_NAMESPACE"/position"));
+
+  RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
+  RCCHECK(rclc_subscription_init_default(&subscriber, &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
+     "/goal_pose"));
+  RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &received_msg,
+      &SubscriptionCallback, ON_NEW_DATA));
+  return true;
+}
+
+void destroy_entities() {
+  rmw_context_t * rmw_context = rcl_context_get_rmw_context(&support.context);
+  (void) rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
+
+  rcl_publisher_fini(&publisher, &node);
+  rcl_publisher_fini(&publisher_pose, &node);
+  rclc_executor_fini(&executor);
+  rcl_subscription_fini(&subscriber, &node);
+  rcl_node_fini(&node);
+  rclc_support_fini(&support);
+}
+
+void ros_loop() {
+  switch (state) {
+  case WAITING_AGENT:
+    EXECUTE_EVERY_N_MS(500, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1))
+                                        ? AGENT_AVAILABLE
+                                        : WAITING_AGENT;);
+    break;
+  case AGENT_AVAILABLE:
+    state = (true == create_entities()) ? AGENT_CONNECTED : WAITING_AGENT;
+    if (state == WAITING_AGENT) {
+      destroy_entities();
+    };
+    break;
+  case AGENT_CONNECTED:
+    EXECUTE_EVERY_N_MS(200, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1))
+                                        ? AGENT_CONNECTED
+                                        : AGENT_DISCONNECTED;);
+    break;
+  case AGENT_DISCONNECTED:
+    destroy_entities();
+    state = WAITING_AGENT;
+    break;
+  default:
+    break;
   }
 }
 

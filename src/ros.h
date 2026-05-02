@@ -11,7 +11,7 @@
 #include "kinematics.h"
 
 // ROS
-#define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){Serial.println("Erreur ROS");}}
+#define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){Serial.println("Erreur ROS"); return false;}}
 #define EXECUTE_EVERY_N_MS(MS, X)  do { \
   static volatile int64_t init = -1; \
   if (init == -1) { init = uxr_millis();} \
@@ -25,3 +25,4 @@ extern pose_2d_t target_pos;
 void init_ros();
 void RosTask(void *pvParams);
 void SubscriptionCallback(const void* msgin);
+void ros_loop();

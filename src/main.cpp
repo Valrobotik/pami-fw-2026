@@ -169,5 +169,6 @@ void setup() {
 
 void loop() {
   command.run();
+  ros_loop();
   delay(10);
 }
