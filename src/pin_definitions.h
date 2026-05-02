@@ -23,3 +23,4 @@
 #define RGB_PIN 21
 #define SERVO_PIN 39
 #define BUZZER_PIN 16
+#define VSENSE_PIN 11

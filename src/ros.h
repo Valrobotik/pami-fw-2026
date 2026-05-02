@@ -5,10 +5,12 @@
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
 #include <std_msgs/msg/bool.h>
+#include <std_msgs/msg/float32.h>
 #include <geometry_msgs/msg/pose_stamped.h>
 #include <rosidl_runtime_c/string_functions.h>
 
 #include "kinematics.h"
+#include "pin_definitions.h"
 
 // ROS
 #define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){Serial.println("Erreur ROS"); return false;}}

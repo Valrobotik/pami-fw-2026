@@ -9,7 +9,9 @@ enum states {
 
 rcl_publisher_t publisher;
 rcl_publisher_t publisher_pose;
+rcl_publisher_t publisher_batt;
 std_msgs__msg__Bool msg;
+std_msgs__msg__Float32 msg_batt;
 geometry_msgs__msg__PoseStamped msg_pose;
 geometry_msgs__msg__PoseStamped received_msg;
 rclc_support_t support;
@@ -48,6 +50,12 @@ bool ros_update_obstacle() {
   return true;
 }
 
+bool ros_update_batt() {
+  msg_batt.data = analogReadMilliVolts(VSENSE_PIN)/3*(1800+10000)/1800;
+  RCCHECK(rcl_publish(&publisher_batt, &msg_batt, NULL));
+  return true;
+}
+
 bool create_entities() {
   allocator = rcl_get_default_allocator();
   RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
@@ -63,6 +71,11 @@ bool create_entities() {
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
     ENV_NAMESPACE"/position"));
+  RCCHECK(rclc_publisher_init_best_effort(
+    &publisher_batt,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+    ENV_NAMESPACE"/batt"));
 
   RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
   RCCHECK(rclc_subscription_init_default(&subscriber, &node,
@@ -81,6 +94,7 @@ void destroy_entities() {
 
   (void) rcl_publisher_fini(&publisher, &node);
   (void) rcl_publisher_fini(&publisher_pose, &node);
+  (void) rcl_publisher_fini(&publisher_batt, &node);
   (void) rclc_executor_fini(&executor);
   (void) rcl_subscription_fini(&subscriber, &node);
   (void) rcl_node_fini(&node);
@@ -107,6 +121,7 @@ void ros_loop() {
     if (state == AGENT_CONNECTED) {
         EXECUTE_EVERY_N_MS(100, ros_update_obstacle());
         EXECUTE_EVERY_N_MS(100, ros_update_odometry());
+        EXECUTE_EVERY_N_MS(1000, ros_update_batt());
         rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
     }
     break;
