@@ -24,6 +24,7 @@ void init_ros() {
   IPAddress agent_ip(ENV_AGENT_IP);
   uint16_t agent_port = 8888;
   set_microros_wifi_transports(ENV_WIFI_SSID, ENV_WIFI_PASSWORD, agent_ip, agent_port);
+  WiFi.setAutoReconnect(true);
   state = states::WAITING_AGENT;
 }
 
