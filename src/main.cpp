@@ -30,6 +30,7 @@ motors_state_t motors_state = motors_state_t::OFF;
 extern states state;
 
 bool noisette = false;
+bool new_pose = false;
 
 bool obstacle_detected = false;
 void StopTask(void *pvParams) {

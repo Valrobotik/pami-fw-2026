@@ -25,6 +25,7 @@ extern Stepper stepper2;
 extern odometry_status_t odometry;
 
 extern bool obstacle_detected;
+extern bool new_pose;
 
 int distance_to_step(float d); //d en millimètre distance à parcourir
 float step_to_distance(int s);

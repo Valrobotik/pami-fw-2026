@@ -13,7 +13,8 @@ void avancer(float d){ // parametre en millimetre
   stepper1.move(-distance_to_step(d));
   stepper2.move(distance_to_step(d));
   while ((stepper2.isMoving() && stepper1.isMoving())){
-    if (obstacle_detected) {
+    if (obstacle_detected || new_pose) {
+      new_pose = false;
       stepper2.stopMove();
       stepper1.stopMove();
       motors_state = motors_state_t::STOPPING_FORWARD;
@@ -29,7 +30,8 @@ void tourner(float rot){ // rot en radian [-pi;pi]
   stepper2.move(steps);
   stepper1.move(steps);
   while ((stepper2.isMoving() && stepper1.isMoving())){
-    if (obstacle_detected) {
+    if (obstacle_detected || new_pose) {
+      new_pose = false;
       stepper2.stopMove();
       stepper1.stopMove();
       motors_state = motors_state_t::STOPPING_TURNING;

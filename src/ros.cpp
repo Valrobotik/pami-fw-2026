@@ -9,12 +9,14 @@ std_msgs__msg__Bool msg;
 std_msgs__msg__Float32 msg_batt;
 geometry_msgs__msg__PoseStamped msg_pose;
 geometry_msgs__msg__PoseStamped received_msg;
+geometry_msgs__msg__PoseStamped received_msg_fix_pose;
 std_msgs__msg__Bool received_msg_noisette;
 rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
 rcl_subscription_t subscriber;
 rcl_subscription_t subscriber_noisette;
+rcl_subscription_t subscriber_fix_pose;
 rclc_executor_t executor;
 
 void init_ros() {
@@ -58,6 +60,18 @@ void NoisetteCallback(const void* msgin) {
   noisette = msg->data;
 }
 
+void FixPoseCallback(const void* msgin) {
+  const geometry_msgs__msg__PoseStamped* msg = (const geometry_msgs__msg__PoseStamped*)msgin;
+  Serial.println("Setting current from ROS");
+  odometry.current.theta = 2 * atan2(msg->pose.orientation.z, msg->pose.orientation.w);
+  odometry.current.x = msg->pose.position.x;
+  odometry.current.y = msg->pose.position.y;
+  target_pos.theta = 2 * atan2(msg->pose.orientation.z, msg->pose.orientation.w);
+  target_pos.x = msg->pose.position.x;
+  target_pos.y = msg->pose.position.y;
+  new_pose = true;
+}
+
 bool create_entities() {
   allocator = rcl_get_default_allocator();
   RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
@@ -79,18 +93,23 @@ bool create_entities() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
     ENV_NAMESPACE"/batt"));
 
-  RCCHECK(rclc_executor_init(&executor, &support.context, 2, &allocator));
+  RCCHECK(rclc_executor_init(&executor, &support.context, 3, &allocator));
   RCCHECK(rclc_subscription_init_default(&subscriber, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
     "/goal_pose"));
   RCCHECK(rclc_subscription_init_default(&subscriber_noisette, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
     ENV_NAMESPACE"/noisette"));
+  RCCHECK(rclc_subscription_init_default(&subscriber_fix_pose, &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
+    ENV_NAMESPACE"/fix_pose"));
 
   RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &received_msg,
       &SubscriptionCallback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &subscriber_noisette, &received_msg_noisette,
       &NoisetteCallback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &subscriber_fix_pose, &received_msg_fix_pose,
+      &FixPoseCallback, ON_NEW_DATA));
 
   return true;
 }
@@ -148,4 +167,5 @@ void SubscriptionCallback(const void* msgin) {
   target_pos.theta = 2 * atan2(msg->pose.orientation.z, msg->pose.orientation.w);
   target_pos.x = msg->pose.position.x;
   target_pos.y = msg->pose.position.y;
+  new_pose = true;
 }
