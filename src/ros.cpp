@@ -69,7 +69,9 @@ void FixPoseCallback(const void* msgin) {
   target_pos.theta = 2 * atan2(msg->pose.orientation.z, msg->pose.orientation.w);
   target_pos.x = msg->pose.position.x;
   target_pos.y = msg->pose.position.y;
-  new_pose = true;
+  if (motors_state != motors_state_t::WAITING) {
+    new_pose = true;
+  }
 }
 
 bool create_entities() {
@@ -167,5 +169,7 @@ void SubscriptionCallback(const void* msgin) {
   target_pos.theta = 2 * atan2(msg->pose.orientation.z, msg->pose.orientation.w);
   target_pos.x = msg->pose.position.x;
   target_pos.y = msg->pose.position.y;
-  new_pose = true;
+  if (motors_state != motors_state_t::WAITING) {
+    new_pose = true;
+  }
 }

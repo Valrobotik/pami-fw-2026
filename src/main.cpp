@@ -106,6 +106,9 @@ void doSetTargetX(char *cmd) {
   command.scalar(&target_x, cmd);
   target_pos.x = target_x/100;
   Serial.printf("Set target X to %.1fcm\n", target_x);
+  if (motors_state != motors_state_t::WAITING) {
+    new_pose = true;
+  }
 }
 
 void doSetTargetT(char *cmd) {
@@ -113,6 +116,9 @@ void doSetTargetT(char *cmd) {
   command.scalar(&target_theta, cmd);
   target_pos.theta = target_theta*PI/180;
   Serial.printf("Set target θ to %.1f°\n", target_theta);
+  if (motors_state != motors_state_t::WAITING) {
+    new_pose = true;
+  }
 }
 
 void doSetTargetY(char *cmd) {
@@ -120,6 +126,9 @@ void doSetTargetY(char *cmd) {
   command.scalar(&target_y, cmd);
   target_pos.y = target_y/100;
   Serial.printf("Set target Y to %.1fcm\n", target_y);
+  if (motors_state != motors_state_t::WAITING) {
+    new_pose = true;
+  }
 }
 
 void doSetCurrentX(char *cmd) {
