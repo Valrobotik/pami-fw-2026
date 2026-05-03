@@ -29,10 +29,11 @@ extern bool new_pose;
 
 int distance_to_step(float d); //d en millimètre distance à parcourir
 float step_to_distance(int s);
-void avancer(float d); // parametre en millimetre
-void tourner(float rot); // rot en radian [-pi;pi]
+void avancer(float d, bool override = false); // parametre en millimetre
+void tourner(float rot, bool override = false); // rot en radian [-pi;pi]
 float droite(float x, float y);
 float clamp_angle(float theta);
 void aller_a_position(float x, float y, float theta);
 void OdoTask(void *pvParams);
 void MoveTask(void *pvParams);
+bool target_reached();

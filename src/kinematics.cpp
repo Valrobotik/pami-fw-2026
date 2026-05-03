@@ -8,12 +8,12 @@ float step_to_distance(int s) {
   return (s*DIAMETRE_ROUE*PI)/STEPS_PER_ROT;
 }
 
-void avancer(float d){ // parametre en millimetre
+void avancer(float d, bool override){ // parametre en millimetre
   motors_state = motors_state_t::FORWARD;
   stepper1.move(-distance_to_step(d));
   stepper2.move(distance_to_step(d));
   while ((stepper2.isMoving() && stepper1.isMoving())){
-    if (obstacle_detected || new_pose) {
+    if ((obstacle_detected || new_pose) && !override) {
       new_pose = false;
       stepper2.stopMove();
       stepper1.stopMove();
@@ -24,13 +24,13 @@ void avancer(float d){ // parametre en millimetre
   motors_state = motors_state_t::WAITING;
 }
 
-void tourner(float rot){ // rot en radian [-pi;pi]
+void tourner(float rot, bool override){ // rot en radian [-pi;pi]
   motors_state = motors_state_t::TURNING;
   int32_t steps = -distance_to_step(LARGEUR*rot/2);
   stepper2.move(steps);
   stepper1.move(steps);
   while ((stepper2.isMoving() && stepper1.isMoving())){
-    if (obstacle_detected || new_pose) {
+    if ((obstacle_detected || new_pose) && !override) {
       new_pose = false;
       stepper2.stopMove();
       stepper1.stopMove();
