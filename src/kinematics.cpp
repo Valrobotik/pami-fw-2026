@@ -56,12 +56,18 @@ float clamp_angle(float theta) {
   return theta;
 }
 
+bool target_reached() {
+  float dx = target_pos.x*1000 - odometry.current.x*1000;
+  float dy = target_pos.y*1000 - odometry.current.y*1000;
+  return (abs(dx) < 5 && abs(dy) < 5 ) && abs(target_pos.theta - odometry.current.theta) < 0.001;
+}
+
 // parametre en millimetre , x et y coordonnées que l'ont veut atteindre,
 // theta parametre d'orientation en radian
 void aller_a_position(float x, float y, float theta) {
   float dx = x - odometry.current.x*1000;
   float dy = y - odometry.current.y*1000;
-  if ((abs(dx) < 5 && abs(dy) < 5 ) && abs(theta - odometry.current.theta) < 0.001) {
+  if (target_reached()) {
     Serial.println("Pas de mouvements nécessaire");
     return;
   }
@@ -99,10 +105,8 @@ void OdoTask(void *pvParams) {
 void MoveTask(void *pvParams){
   Serial.println("Started move task");
   while (1) {
-    if (motors_state == motors_state_t::WAITING) {
-      float dx = target_pos.x*1000 - odometry.current.x*1000;
-      float dy = target_pos.y*1000 - odometry.current.y*1000;
-      if (!((abs(dx) < 5 && abs(dy) < 5 ) && abs(target_pos.theta - odometry.current.theta) < 0.001)) {
+    if (motors_state == motors_state_t::WAITING && !obstacle_detected) {
+      if (!target_reached()) {
         aller_a_position(target_pos.x*1000, target_pos.y*1000, target_pos.theta);
       }
     }
