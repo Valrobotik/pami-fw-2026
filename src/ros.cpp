@@ -77,7 +77,12 @@ void FixPoseCallback(const void* msgin) {
 
 bool create_entities() {
   allocator = rcl_get_default_allocator();
-  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+
+  rcl_init_options_t init_options = rcl_get_zero_initialized_init_options();
+  RCCHECK(rcl_init_options_init(&init_options, allocator));
+  RCCHECK(rcl_init_options_set_domain_id(&init_options, 42));
+
+  RCCHECK(rclc_support_init_with_options(&support, 0, NULL, &init_options, &allocator));
   RCCHECK(rclc_node_init_default(&node, ENV_NAMESPACE, "", &support));
 
   RCCHECK(rclc_publisher_init_best_effort(
