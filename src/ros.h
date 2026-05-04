@@ -34,6 +34,5 @@ extern bool noisette;
 extern bool new_pose;
 
 void init_ros();
-void RosTask(void *pvParams);
 void SubscriptionCallback(const void* msgin);
 void ros_loop();
