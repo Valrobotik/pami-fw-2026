@@ -2,15 +2,16 @@
 
 FastAccelStepperEngine engine = FastAccelStepperEngine();
 
-Stepper::Stepper(uint8_t dir_pin, uint8_t step_pin, uint8_t en_pin, uint32_t current)
-    : m_stepper(NULL), m_dir_pin(dir_pin), m_step_pin(step_pin), m_en_pin(en_pin), m_current(current) {}
+Stepper::Stepper(uint8_t dir_pin, uint8_t step_pin, uint8_t en_pin, uint32_t current, TMC2209::SerialAddress addr)
+    : m_stepper(NULL), m_dir_pin(dir_pin), m_step_pin(step_pin), m_en_pin(en_pin), m_current(current), m_addr(addr), m_driver() {}
 
 void Stepper::init() {
-  m_driver.setup(Serial2);
+  m_driver.setup(Serial2, 115200, m_addr, 4, 5);
   m_driver.setHardwareEnablePin(m_en_pin);
   m_driver.useInternalSenseResistors();
   m_driver.enableCoolStep();
   m_driver.moveUsingStepDirInterface();
+  m_driver.enable();
 
   m_stepper = engine.stepperConnectToPin(m_step_pin);
   if (m_stepper) {

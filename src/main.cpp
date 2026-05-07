@@ -3,6 +3,7 @@
 #include <Adafruit_VL53L0X.h>
 #include "Commander.h"
 #include <FastLED.h>
+#include <TMC2209.h>
 
 
 #include "pin_definitions.h"
@@ -17,8 +18,8 @@ Adafruit_VL53L0X lox = Adafruit_VL53L0X();
 Commander command = Commander(Serial);
 
 extern FastAccelStepperEngine engine;
-Stepper stepper1 = Stepper(DIR_1_PIN, STEP_1_PIN, EN_1_PIN, 300);
-Stepper stepper2 = Stepper(DIR_2_PIN, STEP_2_PIN, EN_2_PIN, 300);
+Stepper stepper1 = Stepper(DIR_1_PIN, STEP_1_PIN, EN_1_PIN, 300, TMC2209::SERIAL_ADDRESS_0);
+Stepper stepper2 = Stepper(DIR_2_PIN, STEP_2_PIN, EN_2_PIN, 300, TMC2209::SERIAL_ADDRESS_0);
 
 CRGB led[1];
 
@@ -169,7 +170,11 @@ void doPrintOdoStatus(char *cmd) {
 
 void setup() {
   Serial.begin(115200);
-  Serial2.begin(115200, SERIAL_8N1, 4, 5);
+  // Serial2.begin(115200, SERIAL_8N1, 4, 5);
+  engine.init();
+  stepper1.init();
+  stepper2.init();
+  delay(10000);
 
   xTaskCreatePinnedToCore(LightTask, "LightTask", 2048, NULL, 2, NULL, 1);
   init_ros();

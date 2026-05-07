@@ -15,7 +15,7 @@ typedef enum motors_state_t {
 
 class Stepper {
 public:
-    Stepper(uint8_t dir_pin, uint8_t step_pin, uint8_t en_pin, uint32_t current);
+    Stepper(uint8_t dir_pin, uint8_t step_pin, uint8_t en_pin, uint32_t current, TMC2209::SerialAddress addr);
     void init();
     MoveResultCode move(int32_t move, bool blocking = false);
     bool isRunning() const;
@@ -27,6 +27,7 @@ public:
      
 private:
     FastAccelStepper* m_stepper;
+    TMC2209::SerialAddress m_addr;
     TMC2209 m_driver;
     uint8_t m_step_pin;
     uint8_t m_dir_pin;
