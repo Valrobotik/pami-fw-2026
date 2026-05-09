@@ -9,6 +9,7 @@ float step_to_distance(int s) {
 }
 
 void avancer(float d, bool override){ // parametre en millimetre
+  if (motors_state == motors_state_t::OFF) return;
   motors_state = motors_state_t::FORWARD;
   stepper1.move(-distance_to_step(d));
   stepper2.move(distance_to_step(d));
@@ -17,6 +18,9 @@ void avancer(float d, bool override){ // parametre en millimetre
       new_pose = false;
       stepper2.stopMove();
       stepper1.stopMove();
+      if (motors_state == motors_state_t::OFF) {
+        return;
+      }
       motors_state = motors_state_t::STOPPING_FORWARD;
     }
     delay(50);
@@ -25,6 +29,7 @@ void avancer(float d, bool override){ // parametre en millimetre
 }
 
 void tourner(float rot, bool override){ // rot en radian [-pi;pi]
+  if (motors_state == motors_state_t::OFF) return;
   motors_state = motors_state_t::TURNING;
   int32_t steps = -distance_to_step(LARGEUR*rot/2);
   stepper2.move(steps);
@@ -34,6 +39,9 @@ void tourner(float rot, bool override){ // rot en radian [-pi;pi]
       new_pose = false;
       stepper2.stopMove();
       stepper1.stopMove();
+      if (motors_state == motors_state_t::OFF) {
+        return;
+      }
       motors_state = motors_state_t::STOPPING_TURNING;
     }
     delay(50);
@@ -82,7 +90,8 @@ void aller_a_position(float x, float y, float theta) {
   tourner(-clamp_angle(odometry.current.theta - theta));
 
   Serial.printf("dx: %.2f, dy: %.2f, dθ: %.2f\n", dx, dy, d_move_theta);
-  motors_state = motors_state_t::WAITING;
+  if (motors_state != motors_state_t::OFF)
+    motors_state = motors_state_t::WAITING;
 }
 
 void OdoTask(void *pvParams) {

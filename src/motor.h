@@ -15,6 +15,8 @@ typedef enum motors_state_t {
   STOPPING_FORWARD,
 } motors_state_t;
 
+extern motors_state_t motors_state;
+
 class Stepper {
 public:
 #if ENV_REV == 1
@@ -30,6 +32,8 @@ public:
     void stopMove();
     int32_t getCurrentPosition() const;
     bool disableOutputs();
+    void disable();
+    void enable();
      
 private:
     FastAccelStepper* m_stepper;

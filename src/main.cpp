@@ -172,14 +172,32 @@ void doPrintOdoStatus(char *cmd) {
   Serial.printf("Target θ:\t %.1f°\n", target_pos.theta*180/PI);
 }
 
+void enter_EMS() {
+  if (motors_state == motors_state_t::OFF) return;
+  new_pose = true;
+  stepper1.disable();
+  stepper2.disable();
+  motors_state = motors_state_t::OFF;
+}
+
+void exit_EMS() {
+  if (motors_state != motors_state_t::OFF) return;
+  odometry = {0};
+  target_pos = {0};
+  stepper1.enable();
+  stepper2.enable();
+  motors_state = motors_state_t::WAITING;
+}
+
 void setup() {
   Serial.begin(115200);
+  FastLED.addLeds<WS2812B, RGB_PIN, GRB>(led, 1);
   xTaskCreatePinnedToCore(LightTask, "LightTask", 2048, NULL, 2, NULL, 1);
   init_ros();
   Wire.setPins(14, 13);
   lox.begin(); // TODO: check for init
 
-  FastLED.addLeds<WS2812B, RGB_PIN, GRB>(led, 1);
+  pinMode(EMS_PIN, INPUT_PULLUP);
 
   xTaskCreatePinnedToCore(StopTask, "StopTask", 2048, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(NoisetteTask, "NoisetteTask", 1024, NULL, 2, NULL, 1);
@@ -194,7 +212,13 @@ void setup() {
   engine.init();
   stepper1.init();
   stepper2.init();
-  motors_state = motors_state_t::WAITING;
+  if (!digitalRead(EMS_PIN)) {
+    motors_state = motors_state_t::WAITING;
+  } else {
+    stepper1.disable();
+    stepper2.disable();
+    motors_state = motors_state_t::OFF;
+  }
 
   xTaskCreatePinnedToCore(OdoTask, "OdoTask", 2048, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(MoveTask, "MoveTask", 4096, NULL, 2, NULL, 1);
@@ -214,5 +238,10 @@ void setup() {
 void loop() {
   command.run();
   ros_loop();
+  if (digitalRead(EMS_PIN)) {
+    enter_EMS();
+  } else {
+    exit_EMS();
+  }
   delay(10);
 }

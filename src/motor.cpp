@@ -49,8 +49,9 @@ void Stepper::init() {
 
 MoveResultCode Stepper::move(int32_t move, bool blocking)
 {
+    if (motors_state == motors_state_t::OFF)
+        return MoveResultCode::OK;
     return m_stepper->move(move, blocking);
-    m_stepper->disableOutputs();
 }
 
 bool Stepper::isRunning() const
@@ -80,4 +81,13 @@ int32_t Stepper::getCurrentPosition() const
 bool Stepper::disableOutputs()
 {
     return m_stepper->disableOutputs();
+}
+
+void Stepper::disable() {
+    m_driver.disable();
+}
+
+void Stepper::enable(){
+    m_stepper->setCurrentPosition(0);
+    m_driver.enable();
 }
