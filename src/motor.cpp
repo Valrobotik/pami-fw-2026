@@ -1,16 +1,24 @@
 #include "motor.h"
+#include <SoftwareSerial.h>
 
 FastAccelStepperEngine engine = FastAccelStepperEngine();
+
+extern SoftwareSerial soft_serial;
 
 Stepper::Stepper(uint8_t dir_pin, uint8_t step_pin, uint8_t en_pin, uint32_t current, TMC2209::SerialAddress addr)
     : m_stepper(NULL), m_dir_pin(dir_pin), m_step_pin(step_pin), m_en_pin(en_pin), m_current(current), m_addr(addr), m_driver() {}
 
 void Stepper::init() {
-  m_driver.setup(Serial2, 115200, m_addr, 4, 5);
+//   m_driver.setup(Serial2, 115200, m_addr, 4, 5);
+  m_driver.setup(soft_serial, 19200, m_addr);
   m_driver.setHardwareEnablePin(m_en_pin);
   m_driver.useInternalSenseResistors();
   m_driver.enableCoolStep();
+//   m_driver.setAllCurrentValues(100, 100, 100);
+  m_driver.setRunCurrent(50);
   m_driver.moveUsingStepDirInterface();
+  m_driver.setMicrostepsPerStep(256);
+  m_driver.enableAutomaticCurrentScaling();
   m_driver.enable();
 
   m_stepper = engine.stepperConnectToPin(m_step_pin);
