@@ -17,6 +17,7 @@ void Stepper::init() {
   m_driver.setMicrostepsPerStep(256);
   m_driver.enableAutomaticCurrentScaling();
   m_driver.enable();
+  Serial2.flush();
   Serial2.end();
   delay(50);
 
