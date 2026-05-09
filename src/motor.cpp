@@ -16,6 +16,8 @@ void Stepper::init() {
   m_driver.setMicrostepsPerStep(256);
   m_driver.enableAutomaticCurrentScaling();
   m_driver.enable();
+  Serial2.end();
+  delay(50);
 
   m_stepper = engine.stepperConnectToPin(m_step_pin);
   if (m_stepper) {
@@ -24,7 +26,7 @@ void Stepper::init() {
     m_stepper->setAutoEnable(true);
   }
   m_stepper->setSpeedInHz(51200);     // 500 steps/s
-  m_stepper->setAcceleration(100000); 
+  m_stepper->setAcceleration(100000);
 }
 
 MoveResultCode Stepper::move(int32_t move, bool blocking)
