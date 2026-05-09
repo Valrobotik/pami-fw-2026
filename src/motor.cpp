@@ -84,10 +84,18 @@ bool Stepper::disableOutputs()
 }
 
 void Stepper::disable() {
+#if ENV_REV == 1
+    digitalWrite(m_en_pin, LOW);
+#elif ENV_REV == 2
     m_driver.disable();
+#endif
 }
 
 void Stepper::enable(){
     m_stepper->setCurrentPosition(0);
+#if ENV_REV == 1
+    digitalWrite(m_en_pin, HIGH);
+#elif ENV_REV == 2
     m_driver.enable();
+#endif
 }
