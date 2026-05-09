@@ -63,11 +63,11 @@ void NoisetteTask(void *pvParams) {
   Serial.println("Started noisette task");
   while (1) {
     if (noisette) {
-      for (int pos = 0; pos < 256; pos++) {  // go from 0-180 degrees
+      for (int pos = 400; pos < 800; pos++) {
         ledcWrite(SERVO_PIN, pos);
         delay(10);
       }
-      for (int pos = 255; pos >= 0; pos--) {  // go from 180-0 degrees
+      for (int pos = 800; pos >= 400; pos--) {
         ledcWrite(SERVO_PIN, pos);
         delay(10);
       }
@@ -180,8 +180,11 @@ void setup() {
   xTaskCreatePinnedToCore(NoisetteTask, "NoisetteTask", 1024, NULL, 2, NULL, 1);
 
   // Bras servo init
-  if (ledcAttach(SERVO_PIN, 60, 12))
+  if (ledcAttach(SERVO_PIN, 50, 10))
     Serial.println("init");
+  ledcWrite(SERVO_PIN, 30); // initial noisette pos
+  delay(2000);
+  ledcWrite(SERVO_PIN, 120); // initial noisette pos
 
   engine.init();
   stepper1.init();
