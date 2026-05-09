@@ -67,7 +67,7 @@ void StopTask(void *pvParams) {
 void NoisetteTask(void *pvParams) {
   Serial.println("Started noisette task");
   while (1) {
-    if (noisette) {
+    if (noisette && motors_state != motors_state_t::OFF) {
       for (int pos = 400; pos < 800; pos++) {
         ledcWrite(SERVO_PIN, pos);
         delay(10);
