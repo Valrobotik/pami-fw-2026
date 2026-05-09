@@ -176,12 +176,7 @@ void setup() {
 
   FastLED.addLeds<WS2812B, RGB_PIN, GRB>(led, 1);
 
-  engine.init();
-  stepper1.init();
-  stepper2.init();
-
   xTaskCreatePinnedToCore(StopTask, "StopTask", 2048, NULL, 2, NULL, 1);
-  xTaskCreatePinnedToCore(MoveTask, "MoveTask", 4096, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(NoisetteTask, "NoisetteTask", 1024, NULL, 2, NULL, 1);
 
   // Bras servo init
@@ -192,7 +187,9 @@ void setup() {
   stepper1.init();
   stepper2.init();
   motors_state = motors_state_t::WAITING;
+
   xTaskCreatePinnedToCore(OdoTask, "OdoTask", 2048, NULL, 2, NULL, 1);
+  xTaskCreatePinnedToCore(MoveTask, "MoveTask", 4096, NULL, 2, NULL, 1);
 
   // Commander
   command.verbose = VerboseMode::user_friendly;
