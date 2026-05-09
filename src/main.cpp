@@ -68,14 +68,16 @@ void NoisetteTask(void *pvParams) {
   Serial.println("Started noisette task");
   while (1) {
     if (noisette && motors_state != motors_state_t::OFF) {
-      for (int pos = 400; pos < 800; pos++) {
+      for (int pos = 140; pos >= 80; pos--) {
         ledcWrite(SERVO_PIN, pos);
         delay(10);
       }
-      for (int pos = 800; pos >= 400; pos--) {
+      for (int pos = 80; pos < 140; pos++) {
         ledcWrite(SERVO_PIN, pos);
         delay(10);
       }
+    } else {
+      ledcWrite(SERVO_PIN, 120);
     }
     delay(100);
   }
@@ -205,8 +207,6 @@ void setup() {
   // Bras servo init
   if (ledcAttach(SERVO_PIN, 50, 10))
     Serial.println("init");
-  ledcWrite(SERVO_PIN, 30); // initial noisette pos
-  delay(2000);
   ledcWrite(SERVO_PIN, 120); // initial noisette pos
 
   engine.init();
