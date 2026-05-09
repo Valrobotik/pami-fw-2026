@@ -1,7 +1,7 @@
 #pragma once
 #include "motor.h"
 
-#define DIAMETRE_ROUE 65// en millimètre
+#define DIAMETRE_ROUE 66// en millimètre
 #define LARGEUR 123// en millimètre largeur entre les 2 roues
 #define STEPS_PER_ROT 51200
 
