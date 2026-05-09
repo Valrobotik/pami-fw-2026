@@ -17,8 +17,13 @@ Adafruit_VL53L0X lox = Adafruit_VL53L0X();
 Commander command = Commander(Serial);
 
 extern FastAccelStepperEngine engine;
+#if ENV_REV == 1
+Stepper stepper1 = Stepper(DIR_1_PIN, STEP_1_PIN, SLEEP_1_PIN, VREF_1_PIN, EN_1_PIN, 300);
+Stepper stepper2 = Stepper(DIR_2_PIN, STEP_2_PIN, SLEEP_2_PIN, VREF_2_PIN, EN_2_PIN, 300);
+#elif ENV_REV == 2
 Stepper stepper1 = Stepper(DIR_1_PIN, STEP_1_PIN, EN_1_PIN, 300, TMC2209::SERIAL_ADDRESS_0);
 Stepper stepper2 = Stepper(DIR_2_PIN, STEP_2_PIN, EN_2_PIN, 300, TMC2209::SERIAL_ADDRESS_1);
+#endif
 
 CRGB led[1];
 
