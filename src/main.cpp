@@ -4,8 +4,6 @@
 #include "Commander.h"
 #include <FastLED.h>
 #include <TMC2209.h>
-#include <SoftwareSerial.h>
-
 
 #include "pin_definitions.h"
 #include "motor.h"
@@ -169,11 +167,8 @@ void doPrintOdoStatus(char *cmd) {
   Serial.printf("Target θ:\t %.1f°\n", target_pos.theta*180/PI);
 }
 
-SoftwareSerial soft_serial(UART_RX_PIN, UART_TX_PIN);
-
 void setup() {
   Serial.begin(115200);
-  // Serial2.begin(115200, SERIAL_8N1, 4, 5);
   engine.init();
   stepper1.init();
   stepper2.init();

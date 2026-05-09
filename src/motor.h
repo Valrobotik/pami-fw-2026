@@ -3,6 +3,8 @@
 #include <FastAccelStepper.h>
 #include <TMC2209.h>
 
+#include "pin_definitions.h"
+
 
 typedef enum motors_state_t {
   OFF,
