@@ -18,6 +18,7 @@ rcl_subscription_t subscriber;
 rcl_subscription_t subscriber_noisette;
 rcl_subscription_t subscriber_fix_pose;
 rclc_executor_t executor;
+rcl_init_options_t init_options;
 
 void init_ros() {
   Serial.printf("Connecting to ap: %s\n", ENV_WIFI_SSID);
@@ -77,8 +78,9 @@ void FixPoseCallback(const void* msgin) {
 
 bool create_entities() {
   allocator = rcl_get_default_allocator();
+  node = rcl_get_zero_initialized_node();
+  init_options = rcl_get_zero_initialized_init_options();
 
-  rcl_init_options_t init_options = rcl_get_zero_initialized_init_options();
   RCCHECK(rcl_init_options_init(&init_options, allocator));
   RCCHECK(rcl_init_options_set_domain_id(&init_options, 42));
 
@@ -133,7 +135,8 @@ void destroy_entities() {
   (void) rcl_subscription_fini(&subscriber, &node);
   (void) rcl_subscription_fini(&subscriber_noisette, &node);
   (void) rcl_node_fini(&node);
-  rclc_support_fini(&support);
+  (void) rclc_support_fini(&support);
+  (void) rcl_init_options_fini(&init_options);
 }
 
 void ros_loop() {
