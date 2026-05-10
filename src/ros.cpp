@@ -107,7 +107,7 @@ bool create_entities() {
     "/goal_pose"));
   RCCHECK(rclc_subscription_init_default(&subscriber_noisette, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
-    ENV_NAMESPACE"/noisette"));
+    "/pami/noisette"));
   RCCHECK(rclc_subscription_init_default(&subscriber_fix_pose, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
     ENV_NAMESPACE"/fix_pose"));
