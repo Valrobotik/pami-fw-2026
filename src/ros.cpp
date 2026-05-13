@@ -142,7 +142,7 @@ void destroy_entities() {
 void ros_loop() {
   switch (state) {
   case states::WAITING_AGENT:
-    EXECUTE_EVERY_N_MS(500, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1))
+    EXECUTE_EVERY_N_MS(2000, state = (RMW_RET_OK == rmw_uros_ping_agent(1000, 1))
                                         ? states::AGENT_AVAILABLE
                                         : states::WAITING_AGENT;);
     break;
@@ -153,14 +153,14 @@ void ros_loop() {
     };
     break;
   case states::AGENT_CONNECTED:
-    EXECUTE_EVERY_N_MS(200, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1))
+    EXECUTE_EVERY_N_MS(2000, state = (RMW_RET_OK == rmw_uros_ping_agent(1000, 1))
                                         ? states::AGENT_CONNECTED
                                         : states::AGENT_DISCONNECTED;);
     if (state == states::AGENT_CONNECTED) {
         EXECUTE_EVERY_N_MS(100, ros_update_obstacle());
         EXECUTE_EVERY_N_MS(100, ros_update_odometry());
         EXECUTE_EVERY_N_MS(1000, ros_update_batt());
-        rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
+        rclc_executor_spin_some(&executor, RCL_MS_TO_NS(1000));
     }
     break;
   case states::AGENT_DISCONNECTED:
