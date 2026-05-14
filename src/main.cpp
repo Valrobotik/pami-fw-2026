@@ -190,6 +190,16 @@ void exit_EMS() {
   stepper2.enable();
   motors_state = motors_state_t::WAITING;
 }
+void EMSTask(void *pvParams) {
+  while (1) {
+    if (digitalRead(EMS_PIN)) {
+      enter_EMS();
+    } else {
+      exit_EMS();
+    }
+    delay(10);
+  }
+}
 
 void setup() {
   Serial.begin(115200);
@@ -221,6 +231,7 @@ void setup() {
   }
 
   xTaskCreatePinnedToCore(OdoTask, "OdoTask", 2048, NULL, 2, NULL, 1);
+  xTaskCreatePinnedToCore(EMSTask, "EMSTask", 2048, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(MoveTask, "MoveTask", 4096, NULL, 2, NULL, 1);
 
   // Commander
@@ -238,10 +249,5 @@ void setup() {
 void loop() {
   command.run();
   ros_loop();
-  if (digitalRead(EMS_PIN)) {
-    enter_EMS();
-  } else {
-    exit_EMS();
-  }
   delay(10);
 }
