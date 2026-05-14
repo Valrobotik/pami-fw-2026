@@ -5,7 +5,9 @@ states state;
 rcl_publisher_t publisher;
 rcl_publisher_t publisher_pose;
 rcl_publisher_t publisher_batt;
+rcl_publisher_t publisher_reached;
 std_msgs__msg__Bool msg;
+std_msgs__msg__Bool msg_reached;
 std_msgs__msg__Float32 msg_batt;
 geometry_msgs__msg__PoseStamped msg_pose;
 geometry_msgs__msg__PoseStamped received_msg;
@@ -57,6 +59,12 @@ bool ros_update_batt() {
   return true;
 }
 
+bool ros_update_reached() {
+  msg_reached.data = target_reached();
+  RCCHECK(rcl_publish(&publisher_reached, &msg_reached, NULL));
+  return true;
+}
+
 void NoisetteCallback(const void* msgin) {
   const std_msgs__msg__Bool* msg = (const std_msgs__msg__Bool*)msgin;
   noisette = msg->data;
@@ -102,6 +110,11 @@ bool create_entities() {
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
     ENV_NAMESPACE"/batt"));
+  RCCHECK(rclc_publisher_init_best_effort(
+    &publisher_reached,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+    ENV_NAMESPACE"/target_reached"));
 
   RCCHECK(rclc_executor_init(&executor, &support.context, 3, &allocator));
   RCCHECK(rclc_subscription_init_default(&subscriber, &node,
