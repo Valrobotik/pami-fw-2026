@@ -8,6 +8,7 @@ rcl_publisher_t publisher_batt;
 rcl_publisher_t publisher_reached;
 std_msgs__msg__Bool msg;
 std_msgs__msg__Bool msg_reached;
+std_msgs__msg__Bool msg_lidar_ems;
 std_msgs__msg__Float32 msg_batt;
 geometry_msgs__msg__PoseStamped msg_pose;
 geometry_msgs__msg__PoseStamped received_msg;
@@ -19,6 +20,7 @@ rcl_node_t node;
 rcl_subscription_t subscriber;
 rcl_subscription_t subscriber_noisette;
 rcl_subscription_t subscriber_fix_pose;
+rcl_subscription_t subscriber_lidar_ems;
 rclc_executor_t executor;
 rcl_init_options_t init_options;
 
@@ -70,6 +72,12 @@ void NoisetteCallback(const void* msgin) {
   noisette = msg->data;
 }
 
+void LidarEmsCallback(const void* msgin) {
+  const std_msgs__msg__Bool* msg = (const std_msgs__msg__Bool*)msgin;
+  lidar_detected = msg->data;
+  Serial.println("lidar updated");
+}
+
 void FixPoseCallback(const void* msgin) {
   const geometry_msgs__msg__PoseStamped* msg = (const geometry_msgs__msg__PoseStamped*)msgin;
   Serial.println("Setting current from ROS");
@@ -116,7 +124,7 @@ bool create_entities() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
     ENV_NAMESPACE"/target_reached"));
 
-  RCCHECK(rclc_executor_init(&executor, &support.context, 3, &allocator));
+  RCCHECK(rclc_executor_init(&executor, &support.context, 4, &allocator));
   RCCHECK(rclc_subscription_init_default(&subscriber, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
     "/goal_pose"));
@@ -126,6 +134,9 @@ bool create_entities() {
   RCCHECK(rclc_subscription_init_default(&subscriber_fix_pose, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
     ENV_NAMESPACE"/fix_pose"));
+  RCCHECK(rclc_subscription_init_default(&subscriber_lidar_ems, &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+    "/front_emergency"));
 
   RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &received_msg,
       &SubscriptionCallback, ON_NEW_DATA));
@@ -133,6 +144,8 @@ bool create_entities() {
       &NoisetteCallback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &subscriber_fix_pose, &received_msg_fix_pose,
       &FixPoseCallback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &subscriber_lidar_ems, &msg_lidar_ems,
+      &LidarEmsCallback, ON_NEW_DATA));
 
   return true;
 }
@@ -144,9 +157,11 @@ void destroy_entities() {
   (void) rcl_publisher_fini(&publisher, &node);
   (void) rcl_publisher_fini(&publisher_pose, &node);
   (void) rcl_publisher_fini(&publisher_batt, &node);
+  (void) rcl_publisher_fini(&publisher_reached, &node);
   (void) rclc_executor_fini(&executor);
   (void) rcl_subscription_fini(&subscriber, &node);
   (void) rcl_subscription_fini(&subscriber_noisette, &node);
+  (void) rcl_subscription_fini(&subscriber_lidar_ems, &node);
   (void) rcl_node_fini(&node);
   (void) rclc_support_fini(&support);
   (void) rcl_init_options_fini(&init_options);
@@ -173,6 +188,7 @@ void ros_loop() {
         EXECUTE_EVERY_N_MS(100, ros_update_obstacle());
         EXECUTE_EVERY_N_MS(100, ros_update_odometry());
         EXECUTE_EVERY_N_MS(1000, ros_update_batt());
+        EXECUTE_EVERY_N_MS(500, ros_update_reached());
         rclc_executor_spin_some(&executor, RCL_MS_TO_NS(1000));
     }
     break;

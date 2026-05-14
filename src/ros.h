@@ -32,6 +32,7 @@ extern odometry_status_t odometry;
 extern pose_2d_t target_pos;
 extern bool noisette;
 extern bool new_pose;
+extern bool lidar_detected;
 
 void init_ros();
 void SubscriptionCallback(const void* msgin);

@@ -44,7 +44,7 @@ void StopTask(void *pvParams) {
   while (1) {
     VL53L0X_RangingMeasurementData_t measure;
     lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
-    if (measure.RangeMilliMeter < DISTANCE) {
+    if (measure.RangeMilliMeter < DISTANCE || lidar_detected) {
       obstacle_detected = true;
       if (millis() - last_obstacle > 5000 && !target_reached()) {
         // TODO: improve with goal setting and restoring
