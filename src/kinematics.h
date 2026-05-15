@@ -1,10 +1,10 @@
 #pragma once
 #include "motor.h"
 
-// #define DIAMETRE_ROUE 66// en millimètre
-// #define LARGEUR 123// en millimètre largeur entre les 2 roues
-#define DIAMETRE_ROUE 46 // en millimètre
-#define LARGEUR 154 // en millimètre largeur entre les 2 roues
+#define DIAMETRE_ROUE 66 // en millimètre
+#define LARGEUR 124// en millimètre largeur entre les 2 roues
+// #define DIAMETRE_ROUE 46 // en millimètre
+// #define LARGEUR 154 // en millimètre largeur entre les 2 roues
 #define STEPS_PER_ROT 51200
 
 typedef struct pose_2d_t {

@@ -9,6 +9,7 @@ rcl_publisher_t publisher_reached;
 std_msgs__msg__Bool msg;
 std_msgs__msg__Bool msg_reached;
 std_msgs__msg__Bool msg_lidar_ems;
+std_msgs__msg__Bool msg_override;
 std_msgs__msg__Float32 msg_batt;
 geometry_msgs__msg__PoseStamped msg_pose;
 geometry_msgs__msg__PoseStamped received_msg;
@@ -21,6 +22,7 @@ rcl_subscription_t subscriber;
 rcl_subscription_t subscriber_noisette;
 rcl_subscription_t subscriber_fix_pose;
 rcl_subscription_t subscriber_lidar_ems;
+rcl_subscription_t subscriber_override;
 rclc_executor_t executor;
 rcl_init_options_t init_options;
 
@@ -78,6 +80,12 @@ void LidarEmsCallback(const void* msgin) {
   Serial.println("lidar updated");
 }
 
+void OverrideCallback(const void* msgin) {
+  const std_msgs__msg__Bool* msg = (const std_msgs__msg__Bool*)msgin;
+  override = msg->data;
+  Serial.println("lidar updated");
+}
+
 void FixPoseCallback(const void* msgin) {
   const geometry_msgs__msg__PoseStamped* msg = (const geometry_msgs__msg__PoseStamped*)msgin;
   Serial.println("Setting current from ROS");
@@ -124,7 +132,7 @@ bool create_entities() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
     ENV_NAMESPACE"/target_reached"));
 
-  RCCHECK(rclc_executor_init(&executor, &support.context, 4, &allocator));
+  RCCHECK(rclc_executor_init(&executor, &support.context, 5, &allocator));
   RCCHECK(rclc_subscription_init_default(&subscriber, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
     ENV_NAMESPACE"/set_pose"));
@@ -137,6 +145,9 @@ bool create_entities() {
   RCCHECK(rclc_subscription_init_default(&subscriber_lidar_ems, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
     "/front_emergency"));
+  RCCHECK(rclc_subscription_init_default(&subscriber_override, &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+    ENV_NAMESPACE"/override"));
 
   RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &received_msg,
       &SubscriptionCallback, ON_NEW_DATA));
@@ -146,6 +157,8 @@ bool create_entities() {
       &FixPoseCallback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &subscriber_lidar_ems, &msg_lidar_ems,
       &LidarEmsCallback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &subscriber_override, &msg_override,
+      &OverrideCallback, ON_NEW_DATA));
 
   return true;
 }

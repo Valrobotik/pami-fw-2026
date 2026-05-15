@@ -33,6 +33,7 @@ extern pose_2d_t target_pos;
 extern bool noisette;
 extern bool new_pose;
 extern bool lidar_detected;
+extern bool override;
 
 void init_ros();
 void SubscriptionCallback(const void* msgin);
