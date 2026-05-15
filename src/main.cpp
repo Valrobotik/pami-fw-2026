@@ -10,7 +10,7 @@
 #include "kinematics.h"
 #include "ros.h"
 
-#define DISTANCE 150 // en millimetre, distance avant le mur
+#define DISTANCE 100 // en millimetre, distance avant le mur
 
 Adafruit_VL53L0X lox = Adafruit_VL53L0X();
  
@@ -37,6 +37,8 @@ extern states state;
 bool noisette = false;
 bool new_pose = false;
 
+bool lidar_detected = false;
+
 bool obstacle_detected = false;
 unsigned long last_obstacle = 0;
 void StopTask(void *pvParams) {
@@ -44,18 +46,19 @@ void StopTask(void *pvParams) {
   while (1) {
     VL53L0X_RangingMeasurementData_t measure;
     lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
-    if (measure.RangeMilliMeter < DISTANCE || lidar_detected) {
+    // if (measure.RangeMilliMeter < DISTANCE || lidar_detected) {
+    if (lidar_detected) {
       obstacle_detected = true;
-      if (millis() - last_obstacle > 5000 && !target_reached()) {
-        // TODO: improve with goal setting and restoring
-        Serial.println("avoiding");
-        avancer(-150, true);
-        Serial.println("avoiding2");
-        tourner(PI/2, true);
-        lox.rangingTest(&measure, false);
-        avancer(150, true);
-        last_obstacle = millis();
-      }
+      // if (millis() - last_obstacle > 5000 && !target_reached()) {
+      //   // TODO: improve with goal setting and restoring
+      //   Serial.println("avoiding");
+      //   avancer(-150, true);
+      //   Serial.println("avoiding2");
+      //   tourner(PI/2, true);
+      //   lox.rangingTest(&measure, false);
+      //   avancer(150, true);
+      //   last_obstacle = millis();
+      // }
     } else {
       obstacle_detected = false;
       last_obstacle = millis();
