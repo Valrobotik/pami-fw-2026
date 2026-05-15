@@ -10,7 +10,7 @@
 #include "kinematics.h"
 #include "ros.h"
 
-#define DISTANCE 100 // en millimetre, distance avant le mur
+#define DISTANCE 150 // en millimetre, distance avant le mur
 
 Adafruit_VL53L0X lox = Adafruit_VL53L0X();
  
@@ -46,8 +46,8 @@ void StopTask(void *pvParams) {
   while (1) {
     VL53L0X_RangingMeasurementData_t measure;
     lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
-    // if (measure.RangeMilliMeter < DISTANCE || lidar_detected) {
-    if (lidar_detected) {
+    if (measure.RangeMilliMeter < DISTANCE) {
+    // if (lidar_detected) {
       obstacle_detected = true;
       // if (millis() - last_obstacle > 5000 && !target_reached()) {
       //   // TODO: improve with goal setting and restoring
