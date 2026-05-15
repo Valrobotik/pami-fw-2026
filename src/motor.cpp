@@ -28,7 +28,7 @@ void Stepper::init() {
   m_driver.useInternalSenseResistors();
   m_driver.enableCoolStep();
 //   m_driver.setAllCurrentValues(100, 100, 100);
-  m_driver.setRunCurrent(50);
+  m_driver.setRunCurrent(80);
   m_driver.setHoldCurrent(30);
   m_driver.moveUsingStepDirInterface();
   m_driver.setMicrostepsPerStep(256);
