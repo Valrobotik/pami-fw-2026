@@ -41,14 +41,15 @@ bool lidar_detected = false;
 
 bool obstacle_detected = false;
 bool override = false;
+bool end = false;
 unsigned long last_obstacle = 0;
 void StopTask(void *pvParams) {
   Serial.println("Started stop task");
   while (1) {
     VL53L0X_RangingMeasurementData_t measure;
     lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
-    // if (measure.RangeMilliMeter < DISTANCE && !override) {
-    if (lidar_detected) {
+    if (measure.RangeMilliMeter < DISTANCE && !override || end) {
+    // if (lidar_detected) {
       obstacle_detected = true;
       // if (millis() - last_obstacle > 5000 && !target_reached()) {
       //   // TODO: improve with goal setting and restoring

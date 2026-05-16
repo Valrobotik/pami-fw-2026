@@ -15,6 +15,7 @@ geometry_msgs__msg__PoseStamped msg_pose;
 geometry_msgs__msg__PoseStamped received_msg;
 geometry_msgs__msg__PoseStamped received_msg_fix_pose;
 std_msgs__msg__Bool received_msg_noisette;
+std_msgs__msg__Bool received_msg_end;
 rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
@@ -23,6 +24,7 @@ rcl_subscription_t subscriber_noisette;
 rcl_subscription_t subscriber_fix_pose;
 rcl_subscription_t subscriber_lidar_ems;
 rcl_subscription_t subscriber_override;
+rcl_subscription_t subscriber_end;
 rclc_executor_t executor;
 rcl_init_options_t init_options;
 
@@ -85,6 +87,11 @@ void OverrideCallback(const void* msgin) {
   override = msg->data;
   Serial.println("lidar updated");
 }
+void EndCallback(const void* msgin) {
+  const std_msgs__msg__Bool* msg = (const std_msgs__msg__Bool*)msgin;
+  end = msg->data;
+  Serial.println("end updated");
+}
 
 void FixPoseCallback(const void* msgin) {
   const geometry_msgs__msg__PoseStamped* msg = (const geometry_msgs__msg__PoseStamped*)msgin;
@@ -132,7 +139,7 @@ bool create_entities() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
     ENV_NAMESPACE"/target_reached"));
 
-  RCCHECK(rclc_executor_init(&executor, &support.context, 5, &allocator));
+  RCCHECK(rclc_executor_init(&executor, &support.context, 6, &allocator));
   RCCHECK(rclc_subscription_init_default(&subscriber, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, PoseStamped),
     ENV_NAMESPACE"/set_pose"));
@@ -148,6 +155,9 @@ bool create_entities() {
   RCCHECK(rclc_subscription_init_default(&subscriber_override, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
     ENV_NAMESPACE"/override"));
+  RCCHECK(rclc_subscription_init_default(&subscriber_end, &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+    ENV_NAMESPACE"/end"));
 
   RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &received_msg,
       &SubscriptionCallback, ON_NEW_DATA));
@@ -159,6 +169,8 @@ bool create_entities() {
       &LidarEmsCallback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &subscriber_override, &msg_override,
       &OverrideCallback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &subscriber_end, &received_msg_end,
+      &EndCallback, ON_NEW_DATA));
 
   return true;
 }
@@ -175,6 +187,7 @@ void destroy_entities() {
   (void) rcl_subscription_fini(&subscriber, &node);
   (void) rcl_subscription_fini(&subscriber_noisette, &node);
   (void) rcl_subscription_fini(&subscriber_lidar_ems, &node);
+  (void) rcl_subscription_fini(&subscriber_end, &node);
   (void) rcl_node_fini(&node);
   (void) rclc_support_fini(&support);
   (void) rcl_init_options_fini(&init_options);
