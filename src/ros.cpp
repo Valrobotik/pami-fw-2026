@@ -217,9 +217,10 @@ void ros_loop() {
 void SubscriptionCallback(const void* msgin) {
   const geometry_msgs__msg__PoseStamped* msg = (const geometry_msgs__msg__PoseStamped*)msgin;
   Serial.println("Setting target from ROS");
-  target_pos.theta = 2 * atan2(msg->pose.orientation.z, msg->pose.orientation.w);
+  // target_pos.theta = 2 * atan2(msg->pose.orientation.z, msg->pose.orientation.w);
   target_pos.x = msg->pose.position.x;
   target_pos.y = msg->pose.position.y;
+  target_pos.theta = odometry.current.theta;
   if (motors_state != motors_state_t::WAITING) {
     new_pose = true;
   }

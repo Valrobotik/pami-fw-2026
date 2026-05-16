@@ -47,19 +47,19 @@ void StopTask(void *pvParams) {
   while (1) {
     VL53L0X_RangingMeasurementData_t measure;
     lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
-    if (measure.RangeMilliMeter < DISTANCE && !override) {
-    // if (lidar_detected) {
+    // if (measure.RangeMilliMeter < DISTANCE && !override) {
+    if (lidar_detected) {
       obstacle_detected = true;
-      if (millis() - last_obstacle > 5000 && !target_reached()) {
-        // TODO: improve with goal setting and restoring
-        Serial.println("avoiding");
-        avancer(-150, true);
-        Serial.println("avoiding2");
-        tourner(PI/2, true);
-        lox.rangingTest(&measure, false);
-        avancer(150, true);
-        last_obstacle = millis();
-      }
+      // if (millis() - last_obstacle > 5000 && !target_reached()) {
+      //   // TODO: improve with goal setting and restoring
+      //   Serial.println("avoiding");
+      //   avancer(-150, true);
+      //   Serial.println("avoiding2");
+      //   tourner(PI/2, true);
+      //   lox.rangingTest(&measure, false);
+      //   avancer(150, true);
+      //   last_obstacle = millis();
+      // }
     } else {
       obstacle_detected = false;
       last_obstacle = millis();

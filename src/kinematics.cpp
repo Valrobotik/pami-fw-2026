@@ -67,7 +67,8 @@ float clamp_angle(float theta) {
 bool target_reached() {
   float dx = target_pos.x*1000 - odometry.current.x*1000;
   float dy = target_pos.y*1000 - odometry.current.y*1000;
-  return (abs(dx) < 5 && abs(dy) < 5 ) && abs(target_pos.theta - odometry.current.theta) < 0.001;
+  // return (abs(dx) < 5 && abs(dy) < 5 ) && abs(target_pos.theta - odometry.current.theta) < 0.001;
+  return (abs(dx) < 5 && abs(dy) < 5 );
 }
 
 // parametre en millimetre , x et y coordonnées que l'ont veut atteindre,
@@ -87,7 +88,7 @@ void aller_a_position(float x, float y, float theta) {
     tourner(d_move_theta);
     avancer(d);
   }
-  tourner(-clamp_angle(odometry.current.theta - theta));
+  // tourner(-clamp_angle(odometry.current.theta - theta));
 
   Serial.printf("dx: %.2f, dy: %.2f, dθ: %.2f\n", dx, dy, d_move_theta);
   if (motors_state != motors_state_t::OFF)
