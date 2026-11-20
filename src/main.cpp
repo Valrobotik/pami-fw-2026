@@ -47,9 +47,9 @@ void StopTask(void *pvParams) {
   Serial.println("Started stop task");
   while (1) {
     VL53L0X_RangingMeasurementData_t measure;
-    lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
-    if (measure.RangeMilliMeter < DISTANCE && !override || end) {
-    // if (lidar_detected) {
+    // lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
+    // if (measure.RangeMilliMeter < DISTANCE && !override || end) {
+    if (lidar_detected) {
       obstacle_detected = true;
       // if (millis() - last_obstacle > 5000 && !target_reached()) {
       //   // TODO: improve with goal setting and restoring
@@ -61,9 +61,9 @@ void StopTask(void *pvParams) {
       //   avancer(150, true);
       //   last_obstacle = millis();
       // }
-    } else {
-      obstacle_detected = false;
-      last_obstacle = millis();
+    // } else {
+      // obstacle_detected = false;
+      // last_obstacle = millis();
     }
     delay(50);
   }
@@ -210,14 +210,14 @@ void setup() {
   Serial.begin(115200);
   FastLED.addLeds<WS2812B, RGB_PIN, GRB>(led, 1);
   xTaskCreatePinnedToCore(LightTask, "LightTask", 2048, NULL, 2, NULL, 1);
-  init_ros();
+  // init_ros();
   Wire.setPins(14, 13);
   lox.begin(); // TODO: check for init
 
   pinMode(EMS_PIN, INPUT_PULLUP);
 
   xTaskCreatePinnedToCore(StopTask, "StopTask", 2048, NULL, 2, NULL, 1);
-  xTaskCreatePinnedToCore(NoisetteTask, "NoisetteTask", 1024, NULL, 2, NULL, 1);
+  // xTaskCreatePinnedToCore(NoisetteTask, "NoisetteTask", 1024, NULL, 2, NULL, 1);
 
   // Bras servo init
   if (ledcAttach(SERVO_PIN, 50, 10))
@@ -235,9 +235,31 @@ void setup() {
     motors_state = motors_state_t::OFF;
   }
 
-  xTaskCreatePinnedToCore(OdoTask, "OdoTask", 2048, NULL, 2, NULL, 1);
+  // xTaskCreatePinnedToCore(OdoTask, "OdoTask", 2048, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(EMSTask, "EMSTask", 2048, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(MoveTask, "MoveTask", 4096, NULL, 2, NULL, 1);
+
+  delay(5000);
+  
+  for (;;) {
+    avancer(200);
+    
+
+
+
+    delay(10000000);
+    // tourner(PI/2);
+    // avancer(1000);
+    // tourner(PI/2);
+    // avancer(1000);
+    // tourner(-PI/2);
+    // avancer(1000);
+    // tourner(-PI/2);
+    // avancer(1000);
+    // tourner(-PI/2);
+    // avancer(1000);
+    // tourner(-PI/2);
+  }
 
   // Commander
   command.verbose = VerboseMode::user_friendly;

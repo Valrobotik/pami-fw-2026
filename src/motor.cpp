@@ -28,8 +28,8 @@ void Stepper::init() {
   m_driver.useInternalSenseResistors();
   m_driver.enableCoolStep();
 //   m_driver.setAllCurrentValues(100, 100, 100);
-  m_driver.setRunCurrent(80);
-  m_driver.setHoldCurrent(60);
+  m_driver.setRunCurrent(40);
+  m_driver.setHoldCurrent(30);
   m_driver.moveUsingStepDirInterface();
   m_driver.setMicrostepsPerStep(256);
   m_driver.enableAutomaticCurrentScaling();
@@ -43,7 +43,7 @@ void Stepper::init() {
     //stepper->setEnablePin(EN_1);
     m_stepper->setAutoEnable(true);
   }
-  m_stepper->setSpeedInHz(51200);     // 500 steps/s
+  m_stepper->setSpeedInHz(51200*1.5);     // 500 steps/s
   m_stepper->setAcceleration(100000);
 }
 
